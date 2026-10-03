@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getAccounts, getRecentTransactions, getDebts, summarizeFinance } from "@/features/finance/queries";
+import { getAccounts, getRecentTransactions, getDebts } from "@/features/finance/queries";
+import { summarizeFinance } from "@/features/finance/summary";
 import { FinanceView } from "@/features/finance/FinanceView";
 import { PageHeader } from "@/components/layout/PageHeader";
 
