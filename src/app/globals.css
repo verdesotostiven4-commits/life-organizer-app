@@ -35,10 +35,7 @@ html { background: #f7f8fb; }
 
 body {
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 15% 0%, rgba(216, 180, 254, 0.18), transparent 26rem),
-    radial-gradient(circle at 100% 12%, rgba(251, 207, 232, 0.20), transparent 24rem),
-    #f7f8fb;
+  background: linear-gradient(135deg, #f7f8fb 0%, #faf8fc 52%, #f8f9fc 100%);
   color: #1e293b;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -74,7 +71,19 @@ body {
 
 .surface-panel {
   border: 1px solid rgba(221, 214, 254, 0.7);
-  background: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
   border-radius: 1.5rem;
-  box-shadow: 0 12px 34px rgba(76, 29, 149, 0.05);
+  box-shadow: 0 8px 24px rgba(76, 29, 149, 0.045);
+}
+
+/* Mantiene el scroll fluido en pantallas largas sin alterar el layout. */
+.perf-surface {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+}
+
+/* Los elementos fijos se promueven a su propia capa y evitan repintados caros. */
+.app-chrome-fixed {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }

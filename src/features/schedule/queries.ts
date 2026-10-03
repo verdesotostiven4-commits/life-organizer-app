@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 
 export type SessionWithSubject = {
   id: string;
@@ -15,16 +16,14 @@ export type SessionWithSubject = {
 /** Trae las sesiones de clase + nombre de materia, ordenadas por día y hora. */
 export async function getSchedule(): Promise<SessionWithSubject[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   // Materias del usuario (para unir en memoria, evitamos problemas de tipos del join).
   const { data: subjects, error: subjectsError } = await supabase
     .from("subjects")
     .select("id, name")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (subjectsError) throw subjectsError;
 
@@ -35,7 +34,7 @@ export async function getSchedule(): Promise<SessionWithSubject[]> {
   const { data: sessions, error: sessionsError } = await supabase
     .from("class_sessions")
     .select("id, subject_id, day_of_week, start_time, end_time, room")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("day_of_week", { ascending: true })
     .order("start_time", { ascending: true });
 

@@ -53,7 +53,7 @@ export function NavBar() {
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-purple-100/80 bg-white/95 px-5 py-6 shadow-[12px_0_40px_rgba(88,28,135,0.04)] backdrop-blur-xl lg:flex">
+      <aside className="app-chrome-fixed fixed inset-y-0 left-0 z-40 hidden w-72 flex-col border-r border-purple-100/80 bg-white px-5 py-6 shadow-[8px_0_24px_rgba(88,28,135,0.035)] lg:flex">
         <Link href="/dashboard" className="flex items-center gap-3 rounded-2xl px-1">
           <div className="rounded-2xl bg-gradient-to-tr from-purple-500 via-rose-300 to-indigo-300 p-[2px] shadow-sm">
             <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white">
@@ -79,7 +79,7 @@ export function NavBar() {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group flex min-h-10 items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold transition-all",
+                  "group flex min-h-10 items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold transition-colors duration-100",
                   active
                     ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
                     : "text-slate-600 hover:bg-purple-50 hover:text-purple-800",
@@ -111,7 +111,7 @@ export function NavBar() {
         </div>
       </aside>
 
-      <header className="sticky top-0 z-30 border-b border-purple-100/80 bg-white/90 px-4 backdrop-blur-xl lg:hidden">
+      <header className="app-chrome-fixed sticky top-0 z-30 border-b border-purple-100/80 bg-white px-4 lg:hidden">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 font-black text-slate-950">
             <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-600 text-white">
@@ -125,7 +125,7 @@ export function NavBar() {
         </div>
       </header>
 
-      <nav className="app-mobile-nav fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-purple-100 bg-white/95 backdrop-blur-xl lg:hidden" aria-label="Principal móvil">
+      <nav className="app-mobile-nav app-chrome-fixed fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 gap-1 border-t border-purple-100 bg-white lg:hidden" aria-label="Principal móvil">
         {MOBILE_PRIMARY.map((link) => {
           const Icon = link.icon;
           const active = isActive(link.href);

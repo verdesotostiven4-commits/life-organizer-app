@@ -1,18 +1,22 @@
 import { redirect } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getAccounts, getRecentTransactions, getDebts, getFinanceSummary } from "@/features/finance/queries";
+import { getAccounts, getRecentTransactions, getDebts } from "@/features/finance/queries";
+import { summarizeFinance } from "@/features/finance/summary";
 import { FinanceView } from "@/features/finance/FinanceView";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function FinancePage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect("/login");
 
-  const [accounts, transactions, debts, summary] = await Promise.all([
-    getAccounts(), getRecentTransactions(), getDebts(), getFinanceSummary(),
+  const [accounts, transactions, debts] = await Promise.all([
+    getAccounts(),
+    getRecentTransactions(),
+    getDebts(),
   ]);
+  const summary = summarizeFinance(accounts, debts);
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">

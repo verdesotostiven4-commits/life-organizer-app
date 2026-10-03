@@ -32,19 +32,20 @@ const MODULES = [
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = auth?.claims?.sub;
+  if (!userId) redirect("/login");
+  const email = typeof auth.claims.email === "string" ? auth.claims.email : null;
 
   const { count } = await supabase
     .from("subjects")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (count === 0) await supabase.rpc("seed_initial_data");
 
   const [{ data: profile }, tasks, finance, water, grades, attendance] = await Promise.all([
-    supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+    supabase.from("profiles").select("display_name").eq("id", userId).single(),
     getTasks(),
     getFinanceSummary(),
     getTodayWater(),
@@ -52,7 +53,7 @@ export default async function DashboardPage() {
     getAttendanceSummary(),
   ]);
 
-  const name = (profile as { display_name?: string } | null)?.display_name ?? user.email?.split("@")[0] ?? "Mónica";
+  const name = (profile as { display_name?: string } | null)?.display_name ?? email?.split("@")[0] ?? "Mónica";
   const pending = tasks.filter((task) => !task.completed).length;
   const averageGrade = grades.length
     ? grades.reduce((sum, grade) => sum + (grade.grade / grade.max_grade) * 10, 0) / grades.length
@@ -107,7 +108,7 @@ export default async function DashboardPage() {
               <Link
                 key={mod.href}
                 href={mod.href}
-                className={`group rounded-3xl border bg-gradient-to-br p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg ${mod.className}`}
+                className={`group rounded-3xl border bg-gradient-to-br p-5 transition-shadow duration-100 hover:shadow-md ${mod.className}`}
               >
                 <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
                   <Icon className="h-5 w-5" />

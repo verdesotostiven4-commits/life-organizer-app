@@ -7,8 +7,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function WellnessPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect("/login");
 
   const [todayWater, workouts] = await Promise.all([getTodayWater(), getRecentWorkouts()]);
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { AttendanceStatus } from "@/types/domain";
 
 export type AttendanceRecord = {
@@ -16,15 +17,13 @@ export async function getAttendanceRange(
   endDate: string,
 ): Promise<AttendanceRecord[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("attendance")
     .select("session_id, session_date, status, note")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .gte("session_date", startDate)
     .lte("session_date", endDate);
 
@@ -41,14 +40,12 @@ export async function saveAttendance(
   note = "",
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase.from("attendance").upsert(
     {
-      user_id: user.id,
+      user_id: userId,
       session_id: sessionId,
       session_date: sessionDate,
       status,
@@ -68,15 +65,13 @@ export async function deleteAttendance(
   sessionDate: string,
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("attendance")
     .delete()
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("session_id", sessionId)
     .eq("session_date", sessionDate);
 
@@ -95,15 +90,13 @@ export async function getAttendanceSummary(): Promise<
   }[]
 > {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("attendance_aggregate")
     .select("subject_id, subject_name, attended, missed, cancelled, attendance_pct")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 

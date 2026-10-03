@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { PantryCategory } from "@/types/domain";
 import { toISODate } from "@/lib/dates";
 
@@ -38,15 +39,13 @@ export type ExtraExpense = {
 /** Trae el presupuesto de despensa activo. */
 export async function getActiveBudget(): Promise<PantryBudget | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return null;
 
   const { data, error } = await supabase
     .from("pantry_budgets")
     .select("id, weeks, budget, is_active, created_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("is_active", true)
     .single();
 
@@ -57,15 +56,13 @@ export async function getActiveBudget(): Promise<PantryBudget | null> {
 /** Trae la lista de compras del usuario. */
 export async function getShoppingItems(): Promise<ShoppingItem[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("shopping_items")
     .select("id, name, category, checked, created_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("checked", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -79,16 +76,14 @@ export async function addShoppingItem(input: {
   category: PantryCategory;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const budget = await getActiveBudget();
 
   const { error } = await supabase.from("shopping_items").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       budget_id: budget?.id ?? null,
       name: input.name,
       category: input.category,
@@ -105,16 +100,14 @@ export async function toggleShoppingItem(
   checked: boolean,
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("shopping_items")
     .update({ checked } as never)
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -122,16 +115,14 @@ export async function toggleShoppingItem(
 /** Elimina un item de la lista de compras. */
 export async function deleteShoppingItem(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("shopping_items")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -139,10 +130,8 @@ export async function deleteShoppingItem(id: string): Promise<void> {
 /** Trae los gastos por categoría del presupuesto activo. */
 export async function getCategoryExpenses(): Promise<CategoryExpense[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const budget = await getActiveBudget();
   if (!budget) return [];
@@ -150,7 +139,7 @@ export async function getCategoryExpenses(): Promise<CategoryExpense[]> {
   const { data, error } = await supabase
     .from("pantry_category_expenses")
     .select("id, category, amount, updated_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("budget_id", budget.id);
 
   if (error) throw error;
@@ -163,10 +152,8 @@ export async function updateCategoryExpense(
   amount: number,
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const budget = await getActiveBudget();
   if (!budget) throw new Error("No hay presupuesto activo");
@@ -175,7 +162,7 @@ export async function updateCategoryExpense(
   const { data: existing, error: fetchError } = await supabase
     .from("pantry_category_expenses")
     .select("id, amount")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("budget_id", budget.id)
     .eq("category", category)
     .single();
@@ -195,7 +182,7 @@ export async function updateCategoryExpense(
   } else {
     const { error } = await supabase.from("pantry_category_expenses").insert(
       {
-        user_id: user.id,
+        user_id: userId,
         budget_id: budget.id,
         category,
         amount,
@@ -209,15 +196,13 @@ export async function updateCategoryExpense(
 /** Trae los gastos extra del usuario. */
 export async function getExtraExpenses(): Promise<ExtraExpense[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("extra_expenses")
     .select("id, name, cost, expense_date, created_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("expense_date", { ascending: false })
     .limit(30);
 
@@ -232,16 +217,14 @@ export async function addExtraExpense(input: {
   expense_date?: string;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const budget = await getActiveBudget();
 
   const { error } = await supabase.from("extra_expenses").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       budget_id: budget?.id ?? null,
       name: input.name,
       cost: input.cost,
@@ -255,16 +238,14 @@ export async function addExtraExpense(input: {
 /** Elimina un gasto extra. */
 export async function deleteExtraExpense(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("extra_expenses")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -276,10 +257,8 @@ export async function savePantryBudget(input: {
   weeks: number;
 }): Promise<PantryBudget> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
   if (input.budget < 0) throw new Error("Presupuesto inválido");
   if (input.weeks < 1 || input.weeks > 4) throw new Error("Semanas inválidas");
 
@@ -287,7 +266,7 @@ export async function savePantryBudget(input: {
     .from("pantry_budgets")
     .upsert(
       {
-        user_id: user.id,
+        user_id: userId,
         budget: input.budget,
         weeks: input.weeks,
         is_active: true,
@@ -307,10 +286,8 @@ export async function setCategoryExpense(
   amount: number,
 ): Promise<CategoryExpense> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
   if (amount < 0) throw new Error("Monto inválido");
 
   const budget = await getActiveBudget();
@@ -320,7 +297,7 @@ export async function setCategoryExpense(
     .from("pantry_category_expenses")
     .upsert(
       {
-        user_id: user.id,
+        user_id: userId,
         budget_id: budget.id,
         category,
         amount,

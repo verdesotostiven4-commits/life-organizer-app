@@ -11,8 +11,8 @@ import { StatsView } from "@/features/stats/StatsView";
 
 export default async function StatsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect("/login");
 
   const [tasks, finance, transactions, grades, attendance, water, workouts] = await Promise.all([
     getTasks(),

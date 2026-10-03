@@ -27,8 +27,8 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Refresca la sesión. Si no existe, continúa sin sesionar (las rutas deciden auth).
-  await supabase.auth.getUser();
+  // Verifica/refresca la sesión con claims firmados. Las rutas deciden auth.
+  await supabase.auth.getClaims();
 
   return response;
 }

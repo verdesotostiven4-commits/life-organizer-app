@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import { getSubjects } from "@/features/tasks/queries";
 
 export type PracticeLog = {
@@ -27,15 +28,13 @@ export type { SubjectOption } from "@/features/tasks/queries";
 /** Trae los registros de prácticas laborales recientes. */
 export async function getRecentPractices(): Promise<PracticeLog[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("practice_logs")
     .select("id, practice_date, description, hours, created_at")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("practice_date", { ascending: false })
     .limit(30);
 
@@ -50,14 +49,12 @@ export async function createPractice(input: {
   hours: number;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase.from("practice_logs").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       practice_date: input.practice_date,
       description: input.description,
       hours: input.hours,
@@ -70,16 +67,14 @@ export async function createPractice(input: {
 /** Elimina un registro de práctica. */
 export async function deletePractice(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("practice_logs")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -87,10 +82,8 @@ export async function deletePractice(id: string): Promise<void> {
 /** Trae las notas de exámenes con nombre de materia. */
 export async function getExamGrades(): Promise<ExamGrade[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const subjects = await getSubjects();
   const subjectMap = new Map<string, string>();
@@ -101,7 +94,7 @@ export async function getExamGrades(): Promise<ExamGrade[]> {
     .select(
       "id, subject_id, exam_name, grade, max_grade, exam_date, created_at",
     )
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("exam_date", { ascending: false });
 
   if (error) throw error;
@@ -122,14 +115,12 @@ export async function createExamGrade(input: {
   exam_date: string;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase.from("exam_grades").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       subject_id: input.subject_id,
       exam_name: input.exam_name,
       grade: input.grade,
@@ -144,16 +135,14 @@ export async function createExamGrade(input: {
 /** Elimina una nota de examen. */
 export async function deleteExamGrade(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("exam_grades")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
