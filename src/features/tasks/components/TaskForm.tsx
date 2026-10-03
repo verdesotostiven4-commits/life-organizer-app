@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -42,27 +42,11 @@ const ROUTINES = [
 ];
 
 export function TaskForm({ open, initialTask, subjects, onClose, onSave, loading }: TaskFormProps) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<TaskCategory>("estudio");
-  const [subjectId, setSubjectId] = useState("");
-  const [priority, setPriority] = useState<Priority>(3);
-  const [dueDate, setDueDate] = useState("");
-
-  useEffect(() => {
-    if (initialTask) {
-      setTitle(initialTask.title);
-      setCategory(initialTask.category);
-      setSubjectId(initialTask.subject_id ?? "");
-      setPriority(initialTask.priority);
-      setDueDate(initialTask.due_date ?? "");
-    } else {
-      setTitle("");
-      setCategory("estudio");
-      setSubjectId("");
-      setPriority(3);
-      setDueDate("");
-    }
-  }, [initialTask, open]);
+  const [title, setTitle] = useState(initialTask?.title ?? "");
+  const [category, setCategory] = useState<TaskCategory>(initialTask?.category ?? "estudio");
+  const [subjectId, setSubjectId] = useState(initialTask?.subject_id ?? "");
+  const [priority, setPriority] = useState<Priority>(initialTask?.priority ?? 3);
+  const [dueDate, setDueDate] = useState(initialTask?.due_date ?? "");
 
   const handleSave = () => {
     if (!title.trim()) return;
