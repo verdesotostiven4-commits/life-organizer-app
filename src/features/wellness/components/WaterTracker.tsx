@@ -1,120 +1,83 @@
 "use client";
 
 import { useState } from "react";
-import { Minus, Plus, Droplet } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { ProgressBar } from "@/components/ui/ProgressBar";
-import { Card, CardBody } from "@/components/ui/Card";
+import confetti from "canvas-confetti";
+import { Droplets, RotateCcw } from "lucide-react";
 import { WATER_GOAL_CUPS, WATER_CUP_ML } from "@/config/finance";
 import { updateWaterCups } from "@/features/wellness/queries";
 import { cn } from "@/lib/utils";
 
-interface WaterTrackerProps {
-  initialCups: number;
-}
-
-export function WaterTracker({ initialCups }: WaterTrackerProps) {
+export function WaterTracker({ initialCups }: { initialCups: number }) {
   const [cups, setCups] = useState(initialCups);
   const [loading, setLoading] = useState(false);
-  const pct = Math.min(100, (cups / WATER_GOAL_CUPS) * 100);
-  const goalReached = cups >= WATER_GOAL_CUPS;
 
-  const handleAdd = async (delta: number) => {
+  const setTarget = async (target: number) => {
     if (loading) return;
+    const next = Math.max(0, Math.min(WATER_GOAL_CUPS, target));
+    const previous = cups;
+    if (next === previous) return;
+
+    setCups(next);
     setLoading(true);
-    // Optimistic.
-    setCups((c) => Math.max(0, c + delta));
+    if (next === WATER_GOAL_CUPS && previous < WATER_GOAL_CUPS) {
+      confetti({ particleCount: 55, spread: 60, origin: { y: 0.72 } });
+    }
+
     try {
-      const newCups = await updateWaterCups(delta);
-      setCups(newCups);
+      const saved = await updateWaterCups(next - previous);
+      setCups(saved);
     } catch {
-      // Revertir.
-      setCups((c) => Math.max(0, c - delta));
+      setCups(previous);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card>
-      <CardBody>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Droplet
-              className={cn(
-                "h-5 w-5 transition-colors",
-                goalReached ? "text-lavanda-600" : "text-lila-300",
-              )}
-              fill={goalReached ? "currentColor" : "none"}
-            />
-            <h3 className="text-sm font-semibold text-lila-900">Hidratación</h3>
+    <section className="rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-blue-50 p-5 shadow-sm sm:p-6">
+      <div className="mb-5 flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sky-700">
+            <Droplets className="h-4 w-4" />
+            <span className="text-[11px] font-black uppercase tracking-[0.14em]">Control de agua</span>
           </div>
-          <span className="text-xs text-lila-400">
-            {cups}/{WATER_GOAL_CUPS} vasos
-          </span>
+          <p className="mt-2 text-3xl font-black text-slate-950">
+            {cups * WATER_CUP_ML} ml
+            <span className="ml-2 text-sm font-bold text-slate-400">/ {WATER_GOAL_CUPS * WATER_CUP_ML} ml</span>
+          </p>
         </div>
+        <button type="button" onClick={() => setTarget(0)} disabled={loading || cups === 0} className="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-sky-600 hover:bg-white disabled:opacity-40">
+          <RotateCcw className="h-3.5 w-3.5" /> Reiniciar
+        </button>
+      </div>
 
-        {/* Vasos visuales */}
-        <div className="flex items-center gap-1 mb-3">
-          {Array.from({ length: WATER_GOAL_CUPS }, (_, i) => (
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+        {Array.from({ length: WATER_GOAL_CUPS }, (_, index) => {
+          const value = index + 1;
+          const active = value <= cups;
+          return (
             <button
-              key={i}
+              key={value}
               type="button"
-              onClick={() => {
-                if (i < cups) {
-                  handleAdd(-(cups - i));
-                } else {
-                  handleAdd(i + 1 - cups);
-                }
-              }}
-              className="flex-1 flex flex-col items-center gap-0.5 group"
+              disabled={loading}
+              onClick={() => setTarget(value === cups ? value - 1 : value)}
+              className={cn(
+                "flex h-20 flex-col items-center justify-end rounded-2xl border p-2 transition-all",
+                active
+                  ? "border-sky-500 bg-sky-500 text-white shadow-md shadow-sky-500/20"
+                  : "border-sky-100 bg-white/80 text-slate-400 hover:border-sky-300",
+              )}
             >
-              <Droplet
-                className={cn(
-                  "h-5 w-5 transition-all group-hover:scale-110",
-                  i < cups
-                    ? "text-lavanda-500"
-                    : "text-lila-200",
-                )}
-                fill={i < cups ? "currentColor" : "none"}
-              />
+              <Droplets className={cn("mb-2 h-5 w-5", active ? "text-white" : "text-sky-200")} />
+              <span className="font-mono text-[10px] font-black">{value * WATER_CUP_ML}ml</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
+      </div>
 
-        <ProgressBar
-          value={pct}
-          tone={goalReached ? "lavender" : "amber"}
-          className="h-2 mb-3"
-        />
-
-        <div className="flex items-center justify-between">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => handleAdd(-1)}
-            disabled={loading || cups === 0}
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-          <p className="text-sm font-medium text-lila-700">
-            {cups * WATER_CUP_ML}ml / {WATER_GOAL_CUPS * WATER_CUP_ML}ml
-          </p>
-          <Button
-            size="sm"
-            onClick={() => handleAdd(1)}
-            disabled={loading}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {goalReached && (
-          <p className="text-xs text-center text-lavanda-600 font-medium mt-2">
-            Meta del día cumplida.
-          </p>
-        )}
-      </CardBody>
-    </Card>
+      <p className="mt-4 text-xs text-slate-500">
+        {cups >= WATER_GOAL_CUPS ? "Meta del día cumplida ✨" : `Te faltan ${WATER_GOAL_CUPS - cups} vasos para tu meta.`}
+      </p>
+    </section>
   );
 }

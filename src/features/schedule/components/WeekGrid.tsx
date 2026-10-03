@@ -1,11 +1,10 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import type { SessionWithSubject } from "@/features/schedule/queries";
-import { SessionCard } from "./SessionCard";
-import { DOW_LABELS, addDays, formatShort } from "@/lib/dates";
+import { addDays, DOW_LABELS, formatShort } from "@/lib/dates";
 import type { AttendanceStatus } from "@/types/domain";
 
 interface WeekGridProps {
@@ -17,93 +16,71 @@ interface WeekGridProps {
   onSessionClick: (session: SessionWithSubject, date: string) => void;
 }
 
-const WEEK_DAYS: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
+const DAYS: (1 | 2 | 3 | 4 | 5)[] = [1, 2, 3, 4, 5];
 
-export function WeekGrid({
-  currentMonday,
-  today,
-  onChangeWeek,
-  sessions,
-  attendance,
-  onSessionClick,
-}: WeekGridProps) {
-  const days = WEEK_DAYS.map((dow) => ({
-    dow,
-    iso: addDays(currentMonday, dow - 1),
-    label: DOW_LABELS[dow - 1],
-  }));
+const STATUS_STYLES: Record<AttendanceStatus, string> = {
+  asisti: "border-emerald-200 bg-emerald-50",
+  falta: "border-rose-200 bg-rose-50",
+  no_hubo: "border-amber-200 bg-amber-50",
+};
+
+export function WeekGrid({ currentMonday, today, onChangeWeek, sessions, attendance, onSessionClick }: WeekGridProps) {
+  const days = DAYS.map((dow) => ({ dow, iso: addDays(currentMonday, dow - 1), label: DOW_LABELS[dow - 1] }));
 
   return (
     <div className="space-y-4">
-      {/* Header de navegación de semana */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => onChangeWeek(-1)}>
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
+      <div className="flex items-center justify-between rounded-3xl border border-purple-100 bg-white/90 p-3 shadow-sm">
+        <Button variant="ghost" size="icon" onClick={() => onChangeWeek(-1)}><ChevronLeft className="h-5 w-5" /></Button>
         <div className="text-center">
-          <p className="text-sm font-semibold text-lila-900">
-            Semana del {formatShort(currentMonday)}
-          </p>
-          <p className="text-xs text-lila-400">
-            {formatShort(currentMonday)} – {formatShort(addDays(currentMonday, 6))}
-          </p>
+          <p className="text-sm font-black text-slate-900">Semana del {formatShort(currentMonday)}</p>
+          <p className="text-[11px] text-slate-400">{formatShort(currentMonday)} – {formatShort(addDays(currentMonday, 6))}</p>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => onChangeWeek(1)}>
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onChangeWeek(1)}><ChevronRight className="h-5 w-5" /></Button>
       </div>
 
-      {/* Grilla de días */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {days.map(({ dow, iso, label }) => {
-          const daySessions = sessions.filter((s) => s.day_of_week === dow);
+          const daySessions = sessions.filter((session) => session.day_of_week === dow);
           const isToday = iso === today;
 
           return (
-            <div
-              key={dow}
-              className="rounded-2xl border border-lila-100 bg-white/60 p-3 min-h-[160px]"
-            >
-              <div className="mb-3 text-center">
-                <p
-                  className={cn(
-                    "text-xs font-semibold uppercase tracking-wide",
-                    isToday ? "text-lavanda-600" : "text-lila-400",
-                  )}
-                >
-                  {label.slice(0, 3)}
-                </p>
-                <p
-                  className={cn(
-                    "text-sm font-medium",
-                    isToday ? "text-lavanda-700" : "text-lila-700",
-                  )}
-                >
-                  {formatShort(iso)}
-                </p>
+            <section key={dow} className={cn(
+              "rounded-3xl border p-3 shadow-sm",
+              isToday ? "border-purple-200 bg-purple-50/70" : "border-slate-100 bg-white/90",
+            )}>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className={cn("text-[10px] font-black uppercase tracking-wider", isToday ? "text-purple-700" : "text-slate-400")}>{label}</p>
+                  <p className="text-xs font-bold text-slate-700">{formatShort(iso)}</p>
+                </div>
+                {isToday && <span className="rounded-full bg-purple-600 px-2 py-0.5 text-[9px] font-black text-white">HOY</span>}
               </div>
 
               <div className="space-y-2">
-                {daySessions.length === 0 && (
-                  <p className="text-xs text-lila-300 text-center py-4">
-                    Sin clases
-                  </p>
-                )}
+                {daySessions.length === 0 && <div className="rounded-2xl border border-dashed border-slate-200 py-8 text-center text-xs text-slate-300">Sin clases</div>}
                 {daySessions.map((session) => {
-                  const key = `${session.id}:${iso}`;
-                  const status = attendance.get(key) ?? null;
+                  const status = attendance.get(`${session.id}:${iso}`) ?? null;
                   return (
-                    <SessionCard
+                    <button
                       key={session.id}
-                      session={session}
-                      date={iso}
-                      status={status}
-                      onClick={onSessionClick}
-                    />
+                      type="button"
+                      onClick={() => onSessionClick(session, iso)}
+                      className={cn(
+                        "w-full rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
+                        status ? STATUS_STYLES[status] : "border-purple-100 bg-white",
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-purple-700">
+                        <Clock3 className="h-3 w-3" /> {session.start_time.slice(0,5)}–{session.end_time.slice(0,5)}
+                      </div>
+                      <p className="mt-1.5 text-xs font-black leading-snug text-slate-900">{session.subject_name}</p>
+                      {session.room && <p className="mt-1 flex items-center gap-1 text-[9px] text-slate-400"><MapPin className="h-2.5 w-2.5" /> {session.room}</p>}
+                      {status && <p className="mt-2 text-[9px] font-black uppercase tracking-wider text-slate-500">{status === "asisti" ? "Asistí" : status === "falta" ? "Falta" : "No hubo clase"}</p>}
+                    </button>
                   );
                 })}
               </div>
-            </div>
+            </section>
           );
         })}
       </div>
