@@ -58,6 +58,26 @@ export function CalendarView({
     [data.attendance],
   );
 
+  const tasksByDate = useMemo(() => {
+    const map = new Map<string, typeof data.tasks>();
+    for (const task of data.tasks) {
+      const current = map.get(task.due_date);
+      if (current) current.push(task);
+      else map.set(task.due_date, [task]);
+    }
+    return map;
+  }, [data.tasks]);
+
+  const classesByDay = useMemo(() => {
+    const map = new Map<number, typeof data.classes>();
+    for (const session of data.classes) {
+      const current = map.get(session.day_of_week);
+      if (current) current.push(session);
+      else map.set(session.day_of_week, [session]);
+    }
+    return map;
+  }, [data.classes]);
+
   const changeMonth = (delta: number) => {
     const next = new Date(year, month + delta, 1);
     const nextYear = next.getFullYear();
@@ -72,11 +92,9 @@ export function CalendarView({
   };
 
   const selectedDayOfWeek = parseISO(selectedDate).getDay();
-  const selectedTasks = data.tasks.filter((task) => task.due_date === selectedDate);
+  const selectedTasks = tasksByDate.get(selectedDate) ?? [];
   const selectedWater = waterMap.get(selectedDate) ?? 0;
-  const selectedClasses = data.classes.filter(
-    (session) => session.day_of_week === selectedDayOfWeek,
-  );
+  const selectedClasses = classesByDay.get(selectedDayOfWeek) ?? [];
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
@@ -108,10 +126,10 @@ export function CalendarView({
               return <div key={`empty-${index}`} className="min-h-20 rounded-2xl bg-slate-50/60 sm:min-h-24" />;
             }
 
-            const dayTasks = data.tasks.filter((task) => task.due_date === iso);
+            const dayTasks = tasksByDate.get(iso) ?? [];
             const cups = waterMap.get(iso) ?? 0;
             const dayOfWeek = parseISO(iso).getDay();
-            const dayClasses = data.classes.filter((session) => session.day_of_week === dayOfWeek);
+            const dayClasses = classesByDay.get(dayOfWeek) ?? [];
             const selected = selectedDate === iso;
             const today = toISODate() === iso;
 
@@ -121,7 +139,7 @@ export function CalendarView({
                 type="button"
                 onClick={() => setSelectedDate(iso)}
                 className={cn(
-                  "min-h-20 rounded-2xl border p-2 text-left transition-all sm:min-h-24",
+                  "min-h-20 rounded-2xl border p-2 text-left transition-colors duration-100 sm:min-h-24",
                   selected
                     ? "border-purple-600 bg-purple-600 text-white shadow-md shadow-purple-600/20"
                     : "border-slate-100 bg-white text-slate-700 hover:border-purple-200 hover:bg-purple-50/50",
