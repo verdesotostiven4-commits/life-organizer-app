@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BookOpen, CheckCircle2, Clock3, NotebookPen, Star, Target, Timer } from "lucide-react";
+import { Bell, CheckCircle2, Clock3, NotebookPen, Star, Target, Timer } from "lucide-react";
 import type { DailyStudyContent, PlannerAccent } from "../types";
 import { CheckListFields, ListFields, PlannerSection, inputClass } from "./Primitives";
 import { PLANNER_THEMES } from "../theme";
