@@ -94,7 +94,7 @@ export function WeekGrid({
                       type="button"
                       onClick={() => onSessionClick(session, iso)}
                       className={cn(
-                        "w-full rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
+                        "w-full rounded-2xl border p-3 text-left transition-colors duration-100 active:bg-purple-50",
                         status ? STATUS_STYLES[status] : "border-purple-100 bg-white",
                       )}
                     >

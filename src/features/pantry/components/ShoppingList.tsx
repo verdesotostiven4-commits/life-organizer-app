@@ -89,7 +89,7 @@ export function ShoppingList({ initialItems }: ShoppingListProps) {
         </h3>
 
         {/* Input + select */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
           <input
             type="text"
             value={name}
@@ -98,15 +98,16 @@ export function ShoppingList({ initialItems }: ShoppingListProps) {
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             className="flex-1 h-10 px-3 rounded-xl border border-lila-200 text-sm text-lila-900 placeholder:text-lila-300 focus:outline-none focus:ring-2 focus:ring-lavanda-400 focus:border-lavanda-400"
           />
-          <div className="w-36">
+          <div className="w-full sm:w-36">
             <Select
               value={category}
               options={CATEGORY_OPTIONS}
               onChange={(v) => setCategory(v as PantryCategory)}
             />
           </div>
-          <Button size="icon" onClick={handleAdd} disabled={!name.trim()}>
+          <Button className="w-full sm:w-10 sm:px-0" onClick={handleAdd} disabled={!name.trim()} aria-label="Agregar producto">
             <Plus className="h-4 w-4" />
+            <span className="sm:hidden">Agregar</span>
           </Button>
         </div>
 
@@ -129,7 +130,7 @@ export function ShoppingList({ initialItems }: ShoppingListProps) {
                   type="button"
                   onClick={() => handleToggle(item.id, !item.checked)}
                   className={cn(
-                    "h-5 w-5 shrink-0 rounded-md border-2 transition-all flex items-center justify-center",
+                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors duration-100",
                     item.checked
                       ? "bg-emerald-500 border-emerald-500"
                       : "border-lila-200 hover:border-lavanda-400",

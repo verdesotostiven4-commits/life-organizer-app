@@ -62,9 +62,9 @@ export function WaterTracker({ initialCups }: { initialCups: number }) {
               disabled={loading}
               onClick={() => setTarget(value === cups ? value - 1 : value)}
               className={cn(
-                "flex h-20 flex-col items-center justify-end rounded-2xl border p-2 transition-all",
+                "flex h-20 flex-col items-center justify-end rounded-2xl border p-2 transition-colors duration-100",
                 active
-                  ? "border-sky-500 bg-sky-500 text-white shadow-md shadow-sky-500/20"
+                  ? "border-sky-500 bg-sky-500 text-white shadow-sm shadow-sky-500/15"
                   : "border-sky-100 bg-white/80 text-slate-400 hover:border-sky-300",
               )}
             >
