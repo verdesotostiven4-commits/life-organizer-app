@@ -208,33 +208,36 @@ export async function deleteDebt(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Calcula totales para el resumen. */
-export async function getFinanceSummary(): Promise<{
+export type FinanceSummary = {
   totalBalance: number;
   totalSavings: number;
   debtsOwed: number;
   debtsOwedToMe: number;
-}> {
-  const [accounts, debts] = await Promise.all([
-    getAccounts(),
-    getDebts(),
-  ]);
+};
 
+/** Calcula totales sin volver a consultar la base cuando ya tenemos los datos. */
+export function summarizeFinance(accounts: Account[], debts: Debt[]): FinanceSummary {
   const totalBalance = accounts
-    .filter((a) => a.kind !== "ahorros")
-    .reduce((sum, a) => sum + a.balance, 0);
+    .filter((account) => account.kind !== "ahorros")
+    .reduce((sum, account) => sum + account.balance, 0);
 
   const totalSavings = accounts
-    .filter((a) => a.kind === "ahorros")
-    .reduce((sum, a) => sum + a.balance, 0);
+    .filter((account) => account.kind === "ahorros")
+    .reduce((sum, account) => sum + account.balance, 0);
 
   const debtsOwed = debts
-    .filter((d) => d.direction === "debo" && d.status === "pendiente")
-    .reduce((sum, d) => sum + d.amount, 0);
+    .filter((debt) => debt.direction === "debo" && debt.status === "pendiente")
+    .reduce((sum, debt) => sum + debt.amount, 0);
 
   const debtsOwedToMe = debts
-    .filter((d) => d.direction === "me_deben" && d.status === "pendiente")
-    .reduce((sum, d) => sum + d.amount, 0);
+    .filter((debt) => debt.direction === "me_deben" && debt.status === "pendiente")
+    .reduce((sum, debt) => sum + debt.amount, 0);
 
   return { totalBalance, totalSavings, debtsOwed, debtsOwedToMe };
+}
+
+/** Calcula totales para pantallas que todavía no tienen cuentas/deudas cargadas. */
+export async function getFinanceSummary(): Promise<FinanceSummary> {
+  const [accounts, debts] = await Promise.all([getAccounts(), getDebts()]);
+  return summarizeFinance(accounts, debts);
 }
