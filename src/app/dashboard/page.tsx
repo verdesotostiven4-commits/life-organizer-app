@@ -108,6 +108,7 @@ export default async function DashboardPage() {
               <Link
                 key={mod.href}
                 href={mod.href}
+                prefetch={true}
                 className={`group rounded-3xl border bg-gradient-to-br p-5 transition-shadow duration-100 hover:shadow-md ${mod.className}`}
               >
                 <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 shadow-sm">
