@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import type {
   TransactionType,
   IncomeMainCategory,
@@ -49,15 +50,13 @@ export type Debt = {
 /** Trae todas las cuentas del usuario con saldo. */
 export async function getAccounts(): Promise<Account[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("accounts")
     .select("id, name, kind, balance, note, sort_order")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("sort_order", { ascending: true });
 
   if (error) throw error;
@@ -67,16 +66,14 @@ export async function getAccounts(): Promise<Account[]> {
 /** Trae las transacciones recientes del usuario (últimas 50). */
 export async function getRecentTransactions(): Promise<Transaction[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   // Cuentas para el join en memoria.
   const { data: accounts } = await supabase
     .from("accounts")
     .select("id, name")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   const accountMap = new Map<string, string>();
   ((accounts ?? []) as { id: string; name: string }[]).forEach((a) =>
@@ -88,7 +85,7 @@ export async function getRecentTransactions(): Promise<Transaction[]> {
     .select(
       "id, type, account_id, to_account_id, amount, main_category, sub_category, description, savings_pct, savings_amount, net_amount, created_at",
     )
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -114,10 +111,8 @@ export async function recordTransaction(input: {
   savings_pct?: number;
 }): Promise<string> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { data, error } = await supabase.rpc("record_transaction", {
     p_type: input.type,
@@ -137,17 +132,15 @@ export async function recordTransaction(input: {
 /** Trae todas las deudas del usuario. */
 export async function getDebts(): Promise<Debt[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("debts")
     .select(
       "id, person, amount, reason, direction, status, settled_at, created_at",
     )
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("status", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -163,14 +156,12 @@ export async function createDebt(input: {
   direction: DebtDirection;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase.from("debts").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       person: input.person,
       amount: input.amount,
       reason: input.reason ?? "",
@@ -187,10 +178,8 @@ export async function toggleDebtStatus(
   status: DebtStatus,
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("debts")
@@ -199,7 +188,7 @@ export async function toggleDebtStatus(
       settled_at: status === "pagado" ? new Date().toISOString() : null,
     } as never)
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -207,16 +196,14 @@ export async function toggleDebtStatus(
 /** Elimina una deuda. */
 export async function deleteDebt(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("debts")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
