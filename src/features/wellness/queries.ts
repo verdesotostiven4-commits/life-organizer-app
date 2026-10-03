@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { MuscleGroup } from "@/types/domain";
 import { toISODate } from "@/lib/dates";
 
@@ -21,16 +22,14 @@ export type WorkoutLog = {
 /** Trae el registro de agua de hoy. */
 export async function getTodayWater(): Promise<WaterLog | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return null;
 
   const today = toISODate();
   const { data, error } = await supabase
     .from("water_logs")
     .select("log_date, cups")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("log_date", today)
     .single();
 
@@ -41,10 +40,8 @@ export async function getTodayWater(): Promise<WaterLog | null> {
 /** Trae los registros de agua de la última semana. */
 export async function getWeekWater(): Promise<WaterLog[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const today = toISODate();
   const weekAgo = new Date();
@@ -53,7 +50,7 @@ export async function getWeekWater(): Promise<WaterLog[]> {
   const { data, error } = await supabase
     .from("water_logs")
     .select("log_date, cups")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .gte("log_date", toISODate(weekAgo))
     .lte("log_date", today)
     .order("log_date", { ascending: true });
@@ -65,10 +62,8 @@ export async function getWeekWater(): Promise<WaterLog[]> {
 /** Incrementa o decrementa los vasos de agua de hoy. */
 export async function updateWaterCups(delta: number): Promise<number> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const today = toISODate();
 
@@ -76,7 +71,7 @@ export async function updateWaterCups(delta: number): Promise<number> {
   const { data: existing, error: fetchError } = await supabase
     .from("water_logs")
     .select("log_date, cups")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("log_date", today)
     .single();
 
@@ -87,7 +82,7 @@ export async function updateWaterCups(delta: number): Promise<number> {
 
   const { error } = await supabase.from("water_logs").upsert(
     {
-      user_id: user.id,
+      user_id: userId,
       log_date: today,
       cups: newCups,
       updated_at: new Date().toISOString(),
@@ -102,17 +97,15 @@ export async function updateWaterCups(delta: number): Promise<number> {
 /** Trae los entrenamientos recientes (últimos 20). */
 export async function getRecentWorkouts(): Promise<WorkoutLog[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("workout_logs")
     .select(
       "id, workout_date, minutes, muscle_group, note, created_at",
     )
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("workout_date", { ascending: false })
     .limit(20);
 
@@ -128,14 +121,12 @@ export async function createWorkout(input: {
   note?: string;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase.from("workout_logs").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       workout_date: input.workout_date,
       minutes: input.minutes,
       muscle_group: input.muscle_group,
@@ -149,16 +140,14 @@ export async function createWorkout(input: {
 /** Elimina un entrenamiento. */
 export async function deleteWorkout(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("workout_logs")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
