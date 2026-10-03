@@ -8,8 +8,8 @@ import { parseISO, toISODate } from "@/lib/dates";
 
 export default async function CalendarPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect("/login");
 
   const today = parseISO(toISODate());
   const year = today.getFullYear();
