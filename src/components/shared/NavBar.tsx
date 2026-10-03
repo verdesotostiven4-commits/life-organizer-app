@@ -69,7 +69,7 @@ export function NavBar() {
           </div>
         </Link>
 
-        <nav className="mt-7 flex-1 space-y-1 overflow-y-auto pr-1" aria-label="Principal">
+        <nav className="mt-5 flex-1 space-y-0.5 overflow-y-auto pb-3 pr-1" aria-label="Principal">
           {LINKS.map((link) => {
             const Icon = link.icon;
             const active = isActive(link.href);
@@ -79,7 +79,7 @@ export function NavBar() {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "group flex min-h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold transition-all",
+                  "group flex min-h-10 items-center gap-3 rounded-2xl px-3.5 text-sm font-semibold transition-all",
                   active
                     ? "bg-purple-600 text-white shadow-md shadow-purple-600/20"
                     : "text-slate-600 hover:bg-purple-50 hover:text-purple-800",
@@ -92,7 +92,7 @@ export function NavBar() {
           })}
         </nav>
 
-        <div className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 via-rose-50 to-indigo-50 p-4">
+        <div className="mt-3 rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 via-rose-50 to-indigo-50 p-3">
           <div className="mb-2 flex items-center gap-2 text-purple-700">
             <Sparkles className="h-4 w-4" />
             <span className="text-[10px] font-black uppercase tracking-[0.14em]">Tu espacio</span>
