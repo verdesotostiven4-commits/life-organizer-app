@@ -153,6 +153,7 @@ export function TasksView({ initialTasks, subjects }: TasksViewProps) {
       )}
 
       <TaskForm
+        key={editing?.id ?? (formOpen ? "new-open" : "new-closed")}
         open={formOpen}
         initialTask={editing}
         subjects={subjects}
