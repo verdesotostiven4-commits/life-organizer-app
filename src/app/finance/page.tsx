@@ -7,8 +7,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function FinancePage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect("/login");
 
   const [accounts, transactions, debts] = await Promise.all([
     getAccounts(),
