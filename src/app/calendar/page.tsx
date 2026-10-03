@@ -19,9 +19,9 @@ export default async function CalendarPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">
       <PageHeader
-        eyebrow="Planificador mensual"
-        title="Tu mes, de un vistazo"
-        description="Consulta tareas y hábitos por fecha sin perder el contexto de todo el mes."
+        eyebrow="Calendario académico & personal"
+        title="Todo lo que pasa en tu mes"
+        description="Toca una fecha para ver clases, asistencia, tareas e hidratación. El horario se registra desde la misma fecha real."
         icon={<CalendarDays className="h-4 w-4" />}
         tone="indigo"
       />
