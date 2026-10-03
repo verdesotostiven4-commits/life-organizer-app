@@ -437,3 +437,212 @@ left join public.attendance a on a.session_id = s.id
 group by s.user_id, s.subject_id, sub.name;
 
 grant select on public.attendance_aggregate to authenticated;
+
+
+-- ============================================================================
+-- HARMONY OS SECURITY HARDENING (2026-10)
+-- Keeps the app compatible with explicit Data API grants and modern Supabase
+-- security recommendations. Legacy prototype tables are not part of this schema.
+-- ============================================================================
+
+grant usage on schema public to authenticated;
+
+revoke all on table
+  public.profiles,
+  public.subjects,
+  public.class_sessions,
+  public.attendance,
+  public.practice_logs,
+  public.tasks,
+  public.water_logs,
+  public.workout_logs,
+  public.pantry_budgets,
+  public.shopping_items,
+  public.pantry_category_expenses,
+  public.extra_expenses,
+  public.accounts,
+  public.transactions,
+  public.debts,
+  public.exam_grades
+from anon;
+
+grant select, insert, update, delete on table
+  public.profiles,
+  public.subjects,
+  public.class_sessions,
+  public.attendance,
+  public.practice_logs,
+  public.tasks,
+  public.water_logs,
+  public.workout_logs,
+  public.pantry_budgets,
+  public.shopping_items,
+  public.pantry_category_expenses,
+  public.extra_expenses,
+  public.accounts,
+  public.transactions,
+  public.debts,
+  public.exam_grades
+to authenticated;
+
+drop policy if exists "profiles own" on public.profiles;
+create policy "profiles own"
+  on public.profiles
+  for all
+  to authenticated
+  using (id = (select auth.uid()))
+  with check (id = (select auth.uid()));
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'subjects','class_sessions','attendance','practice_logs','tasks',
+    'water_logs','workout_logs','pantry_budgets','shopping_items',
+    'pantry_category_expenses','extra_expenses','accounts','transactions',
+    'debts','exam_grades'
+  ]
+  loop
+    execute format('drop policy if exists %I on public.%I', t || '_own', t);
+    execute format(
+      'create policy %I on public.%I for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()))',
+      t || '_own', t
+    );
+  end loop;
+end $$;
+
+alter view public.attendance_aggregate set (security_invoker = true);
+revoke all on public.attendance_aggregate from anon;
+grant select on public.attendance_aggregate to authenticated;
+
+create or replace function public.record_transaction(
+  p_type text,
+  p_account_id uuid,
+  p_amount numeric,
+  p_description text,
+  p_to_account_id uuid default null,
+  p_main_category text default null,
+  p_sub_category text default null,
+  p_savings_pct smallint default 0
+) returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_save numeric;
+  v_net numeric;
+  v_savings_acct uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'No autenticado';
+  end if;
+  if p_amount <= 0 then
+    raise exception 'Monto inválido';
+  end if;
+  if coalesce(p_savings_pct, 0) < 0 or coalesce(p_savings_pct, 0) > 100 then
+    raise exception 'Porcentaje de ahorro inválido';
+  end if;
+  if not exists (
+    select 1 from public.accounts
+    where id = p_account_id and user_id = auth.uid()
+  ) then
+    raise exception 'Cuenta origen inválida';
+  end if;
+
+  if p_type = 'ingreso' then
+    v_save := round(p_amount * coalesce(p_savings_pct, 0) / 100.0, 2);
+    v_net := p_amount - v_save;
+
+    insert into public.transactions
+      (user_id, type, account_id, amount, main_category, sub_category, description, savings_pct, savings_amount, net_amount)
+    values
+      (auth.uid(), 'ingreso', p_account_id, p_amount, p_main_category, p_sub_category, p_description, coalesce(p_savings_pct, 0), v_save, v_net)
+    returning id into v_id;
+
+    update public.accounts
+    set balance = balance + v_net
+    where id = p_account_id and user_id = auth.uid();
+
+    select id into v_savings_acct
+    from public.accounts
+    where user_id = auth.uid() and kind = 'ahorros'
+    order by sort_order
+    limit 1;
+
+    if v_savings_acct is not null and v_save > 0 then
+      update public.accounts
+      set balance = balance + v_save
+      where id = v_savings_acct and user_id = auth.uid();
+    end if;
+
+  elsif p_type = 'gasto' then
+    insert into public.transactions
+      (user_id, type, account_id, amount, description, net_amount)
+    values
+      (auth.uid(), 'gasto', p_account_id, p_amount, p_description, p_amount)
+    returning id into v_id;
+
+    update public.accounts
+    set balance = balance - p_amount
+    where id = p_account_id and user_id = auth.uid();
+
+  elsif p_type = 'retiro' then
+    if p_to_account_id is null or p_to_account_id = p_account_id then
+      raise exception 'Cuenta destino inválida';
+    end if;
+    if not exists (
+      select 1 from public.accounts
+      where id = p_to_account_id and user_id = auth.uid()
+    ) then
+      raise exception 'Cuenta destino inválida';
+    end if;
+
+    insert into public.transactions
+      (user_id, type, account_id, to_account_id, amount, description, net_amount)
+    values
+      (auth.uid(), 'retiro', p_account_id, p_to_account_id, p_amount, p_description, p_amount)
+    returning id into v_id;
+
+    update public.accounts
+    set balance = balance - p_amount
+    where id = p_account_id and user_id = auth.uid();
+
+    update public.accounts
+    set balance = balance + p_amount
+    where id = p_to_account_id and user_id = auth.uid();
+  else
+    raise exception 'Tipo de transacción no soportado: %', p_type;
+  end if;
+
+  return v_id;
+end;
+$$;
+
+alter function public.seed_initial_data() security invoker;
+alter function public.seed_initial_data() set search_path = '';
+alter function public.handle_new_user() set search_path = '';
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.seed_initial_data() from public, anon;
+revoke execute on function public.record_transaction(text, uuid, numeric, text, uuid, text, text, smallint) from public, anon;
+grant execute on function public.seed_initial_data() to authenticated;
+grant execute on function public.record_transaction(text, uuid, numeric, text, uuid, text, text, smallint) to authenticated;
+
+create index if not exists idx_class_sessions_subject on public.class_sessions(subject_id);
+create index if not exists idx_attendance_session on public.attendance(session_id);
+create index if not exists idx_practice_logs_user on public.practice_logs(user_id);
+create index if not exists idx_tasks_subject on public.tasks(subject_id);
+create index if not exists idx_workout_logs_user on public.workout_logs(user_id);
+create index if not exists idx_shopping_items_user on public.shopping_items(user_id);
+create index if not exists idx_shopping_items_budget on public.shopping_items(budget_id);
+create index if not exists idx_pantry_category_expenses_budget on public.pantry_category_expenses(budget_id);
+create index if not exists idx_extra_expenses_user on public.extra_expenses(user_id);
+create index if not exists idx_extra_expenses_budget on public.extra_expenses(budget_id);
+create index if not exists idx_transactions_account on public.transactions(account_id);
+create index if not exists idx_transactions_to_account on public.transactions(to_account_id);
+create index if not exists idx_debts_user on public.debts(user_id);
+create index if not exists idx_exam_grades_user on public.exam_grades(user_id);
+create index if not exists idx_exam_grades_subject on public.exam_grades(subject_id);
