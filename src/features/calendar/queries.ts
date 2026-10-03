@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSchedule, type SessionWithSubject } from "@/features/schedule/queries";
+import { getAttendanceRange, type AttendanceRecord } from "@/features/attendance/queries";
 
 export type CalendarTask = {
   id: string;
@@ -18,6 +20,8 @@ export type CalendarWater = {
 export type CalendarMonthData = {
   tasks: CalendarTask[];
   water: CalendarWater[];
+  classes: SessionWithSubject[];
+  attendance: AttendanceRecord[];
 };
 
 function monthBounds(year: number, month0: number) {
@@ -27,13 +31,19 @@ function monthBounds(year: number, month0: number) {
   return { start, end };
 }
 
-export async function getCalendarMonth(year: number, month0: number): Promise<CalendarMonthData> {
+export async function getCalendarMonth(
+  year: number,
+  month0: number,
+): Promise<CalendarMonthData> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { tasks: [], water: [] };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { tasks: [], water: [], classes: [], attendance: [] };
 
   const { start, end } = monthBounds(year, month0);
-  const [tasksResult, waterResult] = await Promise.all([
+
+  const [tasksResult, waterResult, classes, attendance] = await Promise.all([
     supabase
       .from("tasks")
       .select("id, title, due_date, completed, priority")
@@ -47,15 +57,17 @@ export async function getCalendarMonth(year: number, month0: number): Promise<Ca
       .eq("user_id", user.id)
       .gte("log_date", start)
       .lte("log_date", end),
+    getSchedule(),
+    getAttendanceRange(start, end),
   ]);
 
   if (tasksResult.error) throw tasksResult.error;
   if (waterResult.error) throw waterResult.error;
 
   return {
-    // Los filtros gte/lte excluyen NULL en Postgres; el cast solo compensa
-    // una limitación de inferencia del cliente tipado de Supabase.
     tasks: (tasksResult.data ?? []) as unknown as CalendarTask[],
     water: (waterResult.data ?? []) as CalendarWater[],
+    classes,
+    attendance,
   };
 }
