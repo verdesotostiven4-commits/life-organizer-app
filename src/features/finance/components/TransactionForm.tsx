@@ -9,8 +9,8 @@ import {
   INCOME_MAIN_CATEGORIES,
   INCOME_SUB_CATEGORIES,
   SAVINGS_PRESETS,
+  formatCurrency,
 } from "@/config/finance";
-import { formatCurrency } from "@/config/finance";
 import type { TransactionType, IncomeMainCategory } from "@/types/domain";
 
 interface TransactionFormProps {
@@ -33,7 +33,7 @@ interface TransactionFormProps {
 const TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: "ingreso", label: "Ingreso" },
   { value: "gasto", label: "Gasto" },
-  { value: "retiro", label: "Retiro (transferir a ahorros)" },
+  { value: "retiro", label: "Retiro / transferencia" },
 ];
 
 export function TransactionForm({
@@ -61,7 +61,7 @@ export function TransactionForm({
   }));
 
   const toAccountOptions = accounts
-    .filter((a) => a.kind === "ahorros" && a.id !== accountId)
+    .filter((a) => a.id !== accountId)
     .map((a) => ({ value: a.id, label: a.name }));
 
   const subOptions = mainCategory
@@ -74,15 +74,16 @@ export function TransactionForm({
   const numericAmount = parseFloat(amount) || 0;
   const savingsAmount = (numericAmount * savingsPct) / 100;
   const netAmount = numericAmount - savingsAmount;
+  const invalidRetiro = isRetiro && !toAccountId;
 
   const handleSave = () => {
-    if (!accountId || numericAmount <= 0 || !description.trim()) return;
+    if (!accountId || numericAmount <= 0 || !description.trim() || invalidRetiro) return;
     onSave({
       type,
       account_id: accountId,
       amount: numericAmount,
       description: description.trim(),
-      to_account_id: isRetiro && toAccountId ? toAccountId : null,
+      to_account_id: isRetiro ? toAccountId : null,
       main_category: isIncome && mainCategory ? (mainCategory as IncomeMainCategory) : null,
       sub_category: isIncome && subCategory ? subCategory : null,
       savings_pct: isIncome ? savingsPct : 0,
@@ -90,56 +91,53 @@ export function TransactionForm({
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Nueva transacción"
-    >
+    <Modal open={open} onClose={onClose} title="Nuevo movimiento">
       <div className="space-y-4">
-        {/* Tipo */}
         <div>
-          <label className="block text-xs font-medium text-lila-600 mb-1.5">
-            Tipo
-          </label>
+          <label className="mb-1.5 block text-xs font-medium text-lila-600">Tipo</label>
           <Select
             value={type}
             options={TYPE_OPTIONS}
-            onChange={(v) => setType(v as TransactionType)}
+            onChange={(value) => {
+              setType(value as TransactionType);
+              setToAccountId("");
+            }}
           />
         </div>
 
-        {/* Cuenta origen */}
         <div>
-          <label className="block text-xs font-medium text-lila-600 mb-1.5">
-            {isRetiro ? "Cuenta origen" : "Cuenta"}
+          <label className="mb-1.5 block text-xs font-medium text-lila-600">
+            {isRetiro ? "Cuenta origen" : isIncome ? "¿Dónde entró el dinero?" : "¿De dónde salió?"}
           </label>
           <Select
             value={accountId}
             options={accountOptions}
-            onChange={setAccountId}
+            onChange={(value) => {
+              setAccountId(value);
+              setToAccountId("");
+            }}
           />
         </div>
 
-        {/* Cuenta destino (solo retiro) */}
-        {isRetiro && (
+        {isRetiro ? (
           <div>
-            <label className="block text-xs font-medium text-lila-600 mb-1.5">
-              Transferir a (ahorros)
+            <label className="mb-1.5 block text-xs font-medium text-lila-600">
+              Cuenta destino
             </label>
             <Select
               value={toAccountId}
               options={toAccountOptions}
               onChange={setToAccountId}
-              placeholder="Selecciona cuenta de ahorros…"
+              placeholder="Ej. Efectivo en Mano o Bóveda de Ahorros"
             />
+            <p className="mt-1.5 text-[10px] text-lila-400">
+              Úsalo para retirar del banco a efectivo o mover dinero entre tus cuentas sin cambiar el total.
+            </p>
           </div>
-        )}
+        ) : null}
 
-        {/* Monto */}
         <div>
-          <label className="block text-xs font-medium text-lila-600 mb-1.5">
-            Monto (USD)
-          </label>
+          <label className="mb-1.5 block text-xs font-medium text-lila-600">Monto (USD)</label>
           <input
             type="number"
             step="0.01"
@@ -148,36 +146,34 @@ export function TransactionForm({
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             autoFocus
-            className="w-full h-10 px-3 rounded-xl border border-lila-200 text-sm text-lila-900 placeholder:text-lila-300 focus:outline-none focus:ring-2 focus:ring-lavanda-400 focus:border-lavanda-400"
+            className="h-10 w-full rounded-xl border border-lila-200 px-3 text-sm text-lila-900 placeholder:text-lila-300 focus:border-lavanda-400 focus:outline-none focus:ring-2 focus:ring-lavanda-400"
           />
         </div>
 
-        {/* Descripción */}
         <div>
-          <label className="block text-xs font-medium text-lila-600 mb-1.5">
-            Descripción
+          <label className="mb-1.5 block text-xs font-medium text-lila-600">
+            {isIncome ? "Concepto del ingreso" : "Descripción"}
           </label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="¿De qué se trata?"
-            className="w-full h-10 px-3 rounded-xl border border-lila-200 text-sm text-lila-900 placeholder:text-lila-300 focus:outline-none focus:ring-2 focus:ring-lavanda-400 focus:border-lavanda-400"
+            placeholder={isIncome ? "Ej. Video de boda Riobamba · Luis" : "¿De qué se trata?"}
+            className="h-10 w-full rounded-xl border border-lila-200 px-3 text-sm text-lila-900 placeholder:text-lila-300 focus:border-lavanda-400 focus:outline-none focus:ring-2 focus:ring-lavanda-400"
           />
         </div>
 
-        {/* Categoría (solo ingreso) */}
-        {isIncome && (
+        {isIncome ? (
           <>
             <div>
-              <label className="block text-xs font-medium text-lila-600 mb-1.5">
+              <label className="mb-1.5 block text-xs font-medium text-lila-600">
                 Categoría de ingreso
               </label>
               <Select
                 value={mainCategory}
-                options={INCOME_MAIN_CATEGORIES.map((c) => ({
-                  value: c,
-                  label: c,
+                options={INCOME_MAIN_CATEGORIES.map((category) => ({
+                  value: category,
+                  label: category,
                 }))}
                 onChange={(value) => {
                   setMainCategory(value);
@@ -186,11 +182,10 @@ export function TransactionForm({
                 placeholder="Selecciona categoría…"
               />
             </div>
-            {subOptions.length > 0 && (
+
+            {subOptions.length > 0 ? (
               <div>
-                <label className="block text-xs font-medium text-lila-600 mb-1.5">
-                  Sub-categoría
-                </label>
+                <label className="mb-1.5 block text-xs font-medium text-lila-600">Detalle</label>
                 <Select
                   value={subCategory}
                   options={subOptions}
@@ -198,19 +193,19 @@ export function TransactionForm({
                   placeholder="Selecciona…"
                 />
               </div>
-            )}
-            {/* Presets de ahorro */}
+            ) : null}
+
             <div>
-              <label className="block text-xs font-medium text-lila-600 mb-1.5">
-                Ahorro ({savingsPct}%)
+              <label className="mb-1.5 block text-xs font-medium text-lila-600">
+                Separar a ahorro ({savingsPct}%)
               </label>
-              <div className="flex gap-1.5 flex-wrap">
+              <div className="flex flex-wrap gap-1.5">
                 {SAVINGS_PRESETS.map((pct) => (
                   <button
                     key={pct}
                     type="button"
                     onClick={() => setSavingsPct(pct)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                       savingsPct === pct
                         ? "bg-amber-500 text-white"
                         : "bg-amber-50 text-amber-700 hover:bg-amber-100"
@@ -220,32 +215,24 @@ export function TransactionForm({
                   </button>
                 ))}
               </div>
-              {numericAmount > 0 && (
-                <p className="text-[10px] text-lila-400 mt-1.5">
-                  Ahorro: {formatCurrency(savingsAmount)} · Neto:{" "}
-                  {formatCurrency(netAmount)}
-                </p>
-              )}
+              {numericAmount > 0 ? (
+                <div className="mt-2 rounded-xl bg-amber-50/70 px-3 py-2 text-[10px] text-amber-800">
+                  En ahorros: <strong>{formatCurrency(savingsAmount)}</strong> · Disponible en la cuenta:{" "}
+                  <strong>{formatCurrency(netAmount)}</strong>
+                </div>
+              ) : null}
             </div>
           </>
-        )}
+        ) : null}
 
-        {/* Acciones */}
         <div className="flex gap-2 pt-2">
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={onClose}
-            disabled={loading}
-          >
+          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
           <Button
             className="flex-1"
             onClick={handleSave}
-            disabled={
-              !accountId || numericAmount <= 0 || !description.trim() || loading
-            }
+            disabled={!accountId || numericAmount <= 0 || !description.trim() || invalidRetiro || loading}
           >
             {loading ? "Guardando…" : "Registrar"}
           </Button>
