@@ -8,8 +8,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 
 export default async function AcademicPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { data: auth } = await supabase.auth.getClaims();
+  if (!auth?.claims?.sub) redirect("/login");
 
   const [practices, examGrades, subjects] = await Promise.all([
     getRecentPractices(), getExamGrades(), getSubjects(),
