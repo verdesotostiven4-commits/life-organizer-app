@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import { getSchedule, type SessionWithSubject } from "@/features/schedule/queries";
 import { getAttendanceRange, type AttendanceRecord } from "@/features/attendance/queries";
 
@@ -36,10 +37,8 @@ export async function getCalendarMonth(
   month0: number,
 ): Promise<CalendarMonthData> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { tasks: [], water: [], classes: [], attendance: [] };
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return { tasks: [], water: [], classes: [], attendance: [] };
 
   const { start, end } = monthBounds(year, month0);
 
@@ -47,14 +46,14 @@ export async function getCalendarMonth(
     supabase
       .from("tasks")
       .select("id, title, due_date, completed, priority")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("due_date", start)
       .lte("due_date", end)
       .order("priority", { ascending: false }),
     supabase
       .from("water_logs")
       .select("log_date, cups")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .gte("log_date", start)
       .lte("log_date", end),
     getSchedule(),
