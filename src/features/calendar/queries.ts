@@ -53,7 +53,9 @@ export async function getCalendarMonth(year: number, month0: number): Promise<Ca
   if (waterResult.error) throw waterResult.error;
 
   return {
-    tasks: (tasksResult.data ?? []).filter((task) => task.due_date !== null) as CalendarTask[],
+    // Los filtros gte/lte excluyen NULL en Postgres; el cast solo compensa
+    // una limitación de inferencia del cliente tipado de Supabase.
+    tasks: (tasksResult.data ?? []) as unknown as CalendarTask[],
     water: (waterResult.data ?? []) as CalendarWater[],
   };
 }
