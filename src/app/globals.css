@@ -87,3 +87,30 @@ body {
   transform: translateZ(0);
   backface-visibility: hidden;
 }
+
+
+/* Interacciones táctiles: sin demora perceptible ni resaltado nativo molesto. */
+@media (pointer: coarse) {
+  :where(a, button, summary, input, select, textarea) {
+    touch-action: manipulation;
+  }
+
+  :where(a, button, summary) {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.nav-progress-bar {
+  width: 42%;
+  animation: nav-progress 0.8s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes nav-progress {
+  from { transform: translateX(-35%); }
+  to { transform: translateX(175%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress-bar { animation: none; width: 100%; opacity: 0.55; }
+}
