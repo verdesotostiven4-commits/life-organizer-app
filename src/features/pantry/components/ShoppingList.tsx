@@ -98,7 +98,7 @@ export function ShoppingList({ initialItems }: ShoppingListProps) {
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             className="flex-1 h-10 px-3 rounded-xl border border-lila-200 text-sm text-lila-900 placeholder:text-lila-300 focus:outline-none focus:ring-2 focus:ring-lavanda-400 focus:border-lavanda-400"
           />
-          <div className="w-full sm:w-36">
+          <div className="w-full sm:w-44">
             <Select
               value={category}
               options={CATEGORY_OPTIONS}

@@ -21,7 +21,7 @@ export default async function SchedulePage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">
+    <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">
       <PageHeader
         eyebrow="Horario oficial ESPOCH"
         title="Clases y asistencia"

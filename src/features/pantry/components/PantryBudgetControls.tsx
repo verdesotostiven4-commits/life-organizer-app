@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, PencilLine, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
 import { PANTRY_CATEGORIES, formatCurrency } from "@/config/finance";
 import {
   savePantryBudget,
@@ -104,18 +105,17 @@ export function PantryBudgetControls({
             />
           </label>
 
-          <label className="block">
+          <div>
             <span className="mb-1.5 block text-[11px] font-bold text-slate-500">Debe rendir</span>
-            <select
-              value={weeks}
-              onChange={(event) => setWeeks(Number(event.target.value))}
-              className="h-11 w-full rounded-xl border border-emerald-100 bg-white px-3 text-sm font-semibold text-slate-800 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-            >
-              {[1, 2, 3, 4].map((value) => (
-                <option key={value} value={value}>{value} semana{value === 1 ? "" : "s"}</option>
-              ))}
-            </select>
-          </label>
+            <Select
+              value={String(weeks)}
+              options={[1, 2, 3, 4].map((value) => ({
+                value: String(value),
+                label: `${value} semana${value === 1 ? "" : "s"}`,
+              }))}
+              onChange={(value) => setWeeks(Number(value))}
+            />
+          </div>
 
           <Button onClick={handleSaveBudget} disabled={savingBudget}>
             <PencilLine className="h-4 w-4" />
