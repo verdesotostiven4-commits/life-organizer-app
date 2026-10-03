@@ -11,7 +11,6 @@ import type { WorkoutLog } from "@/features/wellness/queries";
 import { createWorkout, deleteWorkout } from "@/features/wellness/queries";
 import { MUSCLE_GROUPS } from "@/config/finance";
 import { formatShort, toISODate } from "@/lib/dates";
-import { cn } from "@/lib/utils";
 import type { MuscleGroup } from "@/types/domain";
 
 interface WorkoutSectionProps {

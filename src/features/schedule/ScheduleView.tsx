@@ -194,6 +194,7 @@ export function ScheduleView({
       </div>
 
       <AttendanceModal
+        key={`${modalSession?.id ?? "none"}:${modalDate}:${initialStatus ?? "none"}`}
         open={modalOpen}
         session={modalSession}
         initialDate={modalDate}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
@@ -31,12 +31,6 @@ export function AttendanceModal({
 }: AttendanceModalProps) {
   const [date, setDate] = useState(initialDate);
   const [status, setStatus] = useState<AttendanceStatus | null>(initialStatus);
-
-  // Sincronizar cuando cambia la sesión o la fecha inicial.
-  useEffect(() => {
-    setDate(initialDate);
-    setStatus(initialStatus);
-  }, [initialDate, initialStatus, session?.id]);
 
   if (!session) return null;
 

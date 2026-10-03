@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
@@ -44,24 +44,13 @@ export function TransactionForm({
   loading,
 }: TransactionFormProps) {
   const [type, setType] = useState<TransactionType>("ingreso");
-  const [accountId, setAccountId] = useState("");
+  const [accountId, setAccountId] = useState(() => accounts[0]?.id ?? "");
   const [toAccountId, setToAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [mainCategory, setMainCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [savingsPct, setSavingsPct] = useState<number>(0);
-
-  useEffect(() => {
-    if (open && accounts.length > 0 && !accountId) {
-      setAccountId(accounts[0].id);
-    }
-  }, [open, accounts, accountId]);
-
-  // Reset sub-category cuando cambia main category.
-  useEffect(() => {
-    setSubCategory("");
-  }, [mainCategory]);
 
   const isIncome = type === "ingreso";
   const isRetiro = type === "retiro";
@@ -190,7 +179,10 @@ export function TransactionForm({
                   value: c,
                   label: c,
                 }))}
-                onChange={setMainCategory}
+                onChange={(value) => {
+                  setMainCategory(value);
+                  setSubCategory("");
+                }}
                 placeholder="Selecciona categoría…"
               />
             </div>

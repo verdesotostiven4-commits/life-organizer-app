@@ -9,8 +9,8 @@ export function Card({ className, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-lila-100 bg-white/80 backdrop-blur-sm",
-        "shadow-sm transition-shadow hover:shadow-md",
+        "rounded-3xl border border-purple-100/70 bg-white/90 shadow-[0_12px_34px_rgba(76,29,149,0.05)] backdrop-blur-sm",
+        "transition-all duration-200 hover:shadow-[0_18px_42px_rgba(76,29,149,0.08)]",
         className,
       )}
       {...props}
@@ -26,37 +26,18 @@ interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
   action?: ReactNode;
 }
 
-export function CardHeader({
-  title,
-  subtitle,
-  action,
-  className,
-  ...props
-}: CardHeaderProps) {
+export function CardHeader({ title, subtitle, action, className, ...props }: CardHeaderProps) {
   return (
-    <div
-      className={cn(
-        "flex items-start justify-between gap-3 px-5 pt-4 pb-3",
-        className,
-      )}
-      {...props}
-    >
+    <div className={cn("flex items-start justify-between gap-3 px-5 pt-5 pb-3", className)} {...props}>
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-lila-900 truncate">{title}</h3>
-        {subtitle && (
-          <p className="text-xs text-lila-500 mt-0.5 truncate">{subtitle}</p>
-        )}
+        <h3 className="truncate text-sm font-bold text-slate-900">{title}</h3>
+        {subtitle && <p className="mt-0.5 truncate text-xs text-slate-500">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
 
-export function CardBody({
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div className={cn("px-5 pb-4", className)} {...props} />
-  );
+export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("px-5 pb-5 pt-4", className)} {...props} />;
 }

@@ -54,18 +54,16 @@ export function Select({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // Reset highlight al abrir.
-  useEffect(() => {
-    if (open) {
-      const idx = options.findIndex((o) => o.value === value);
-      setHighlighted(idx >= 0 ? idx : 0);
-    }
-  }, [open, options, value]);
+  const openMenu = () => {
+    const idx = options.findIndex((o) => o.value === value);
+    setHighlighted(idx >= 0 ? idx : 0);
+    setOpen(true);
+  };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!open && (e.key === "Enter" || e.key === " " || e.key === "ArrowDown")) {
       e.preventDefault();
-      setOpen(true);
+      openMenu();
       return;
     }
     if (!open) return;
@@ -105,7 +103,10 @@ export function Select({
         ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (open) setOpen(false);
+          else openMenu();
+        }}
         className={cn(
           "w-full h-10 px-3 flex items-center justify-between gap-2",
           "rounded-xl border text-sm transition-colors",

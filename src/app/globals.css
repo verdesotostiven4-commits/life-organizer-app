@@ -1,17 +1,9 @@
 @import "tailwindcss";
 
-/* ==========================================================================
-   Harmony OS — Paleta editorial
-   Blanco marfil · Lavanda · Lila · Rosa cuarzo · Esmeralda · Ámbar
-   ========================================================================== */
-
 @theme {
-  /* Marfil — fondo base */
   --color-marfil: #faf9f6;
   --color-marfil-dark: #f5f3ed;
-
-  /* Lavanda — color primario (acciones, acentos) */
-  --color-lavanda-50:  #f5f3ff;
+  --color-lavanda-50: #f5f3ff;
   --color-lavanda-100: #ede9fe;
   --color-lavanda-200: #ddd6fe;
   --color-lavanda-300: #c4b5fd;
@@ -22,9 +14,7 @@
   --color-lavanda-800: #5b21b6;
   --color-lavanda-900: #4c1d95;
   --color-lavanda-950: #2e1065;
-
-  /* Lila — neutro con tinte (fondos, bordes, texto) */
-  --color-lila-50:  #faf8fb;
+  --color-lila-50: #faf8fb;
   --color-lila-100: #f3f0f7;
   --color-lila-200: #e6e0ee;
   --color-lila-300: #d1c7dd;
@@ -35,89 +25,56 @@
   --color-lila-800: #4a3c5c;
   --color-lila-900: #3a2e48;
   --color-lila-950: #1e1725;
-
-  /* Fuentes */
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
 }
 
-/* ==========================================================================
-   Base
-   ========================================================================== */
+:root { --mobile-nav-height: 5rem; }
+
+html { background: #f7f8fb; }
 
 body {
-  background-color: var(--color-marfil);
-  color: var(--color-lila-900);
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(216, 180, 254, 0.18), transparent 26rem),
+    radial-gradient(circle at 100% 12%, rgba(251, 207, 232, 0.20), transparent 24rem),
+    #f7f8fb;
+  color: #1e293b;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Keep navigation sizing and page clearance in sync before hydration. */
-:root {
-  --mobile-nav-height: 4.5rem;
-}
-
 .app-mobile-nav {
-  height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+  min-height: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
   padding: 0.5rem max(0.5rem, env(safe-area-inset-right, 0px))
     calc(0.5rem + env(safe-area-inset-bottom, 0px))
     max(0.5rem, env(safe-area-inset-left, 0px));
 }
 
-.app-mobile-nav summary::-webkit-details-marker {
-  display: none;
-}
+.app-mobile-nav summary::-webkit-details-marker { display: none; }
 
-.app-header :is(a, button):focus-visible,
-.app-mobile-nav :is(a, summary):focus-visible {
+:where(a, button, input, select, textarea, summary):focus-visible {
   outline: 2px solid var(--color-lavanda-500);
   outline-offset: 2px;
 }
 
-@media (width < 64rem) {
-  body:has(nav.app-mobile-nav) {
-    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
-  }
-
-  html:has(nav.app-mobile-nav) {
-    scroll-padding-top: 4.5rem;
-    scroll-padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
-  }
-}
-
-/* Scrollbar sutil */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-lila-200);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-lila-300);
-}
-
-/* Selección de texto */
 ::selection {
   background: var(--color-lavanda-200);
-  color: var(--color-lavanda-900);
+  color: var(--color-lavanda-950);
 }
 
-/* Eliminar outline azul nativo, usar ring de Tailwind */
-*:focus {
-  outline: none;
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd6e7; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #c9b9d9; }
 
-/* Ocultar scrollbar para nav scrollable */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+.surface-panel {
+  border: 1px solid rgba(221, 214, 254, 0.7);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 34px rgba(76, 29, 149, 0.05);
 }
