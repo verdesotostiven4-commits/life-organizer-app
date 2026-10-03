@@ -268,3 +268,69 @@ export async function deleteExtraExpense(id: string): Promise<void> {
 
   if (error) throw error;
 }
+
+
+/** Crea o actualiza el presupuesto de despensa elegido por el usuario. */
+export async function savePantryBudget(input: {
+  budget: number;
+  weeks: number;
+}): Promise<PantryBudget> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+  if (input.budget < 0) throw new Error("Presupuesto inválido");
+  if (input.weeks < 1 || input.weeks > 4) throw new Error("Semanas inválidas");
+
+  const { data, error } = await supabase
+    .from("pantry_budgets")
+    .upsert(
+      {
+        user_id: user.id,
+        budget: input.budget,
+        weeks: input.weeks,
+        is_active: true,
+      } as never,
+      { onConflict: "user_id" },
+    )
+    .select("id, weeks, budget, is_active, created_at")
+    .single();
+
+  if (error) throw error;
+  return data as PantryBudget;
+}
+
+/** Guarda el total real gastado en una categoría; no reparte el presupuesto. */
+export async function setCategoryExpense(
+  category: PantryCategory,
+  amount: number,
+): Promise<CategoryExpense> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+  if (amount < 0) throw new Error("Monto inválido");
+
+  const budget = await getActiveBudget();
+  if (!budget) throw new Error("Primero configura tu presupuesto de despensa");
+
+  const { data, error } = await supabase
+    .from("pantry_category_expenses")
+    .upsert(
+      {
+        user_id: user.id,
+        budget_id: budget.id,
+        category,
+        amount,
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "user_id,budget_id,category" },
+    )
+    .select("id, category, amount, updated_at")
+    .single();
+
+  if (error) throw error;
+  return data as CategoryExpense;
+}

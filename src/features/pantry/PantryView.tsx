@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { BudgetOverview } from "./components/BudgetOverview";
 import { ShoppingList } from "./components/ShoppingList";
 import { ExtraExpenses } from "./components/ExtraExpenses";
+import { PantryBudgetControls } from "./components/PantryBudgetControls";
 import type {
   PantryBudget,
   ShoppingItem,
@@ -18,12 +20,16 @@ interface PantryViewProps {
 }
 
 export function PantryView({
-  budget,
+  budget: initialBudget,
   shoppingItems,
-  categoryExpenses,
-  extraExpenses,
+  categoryExpenses: initialCategoryExpenses,
+  extraExpenses: initialExtraExpenses,
 }: PantryViewProps) {
-  const extraTotal = extraExpenses.reduce((s, e) => s + e.cost, 0);
+  const [budget, setBudget] = useState(initialBudget);
+  const [categoryExpenses, setCategoryExpenses] = useState(initialCategoryExpenses);
+  const [extraExpenses, setExtraExpenses] = useState(initialExtraExpenses);
+
+  const extraTotal = extraExpenses.reduce((sum, expense) => sum + expense.cost, 0);
 
   return (
     <div className="space-y-4">
@@ -32,8 +38,20 @@ export function PantryView({
         expenses={categoryExpenses}
         extraTotal={extraTotal}
       />
+
+      <PantryBudgetControls
+        budget={budget}
+        expenses={categoryExpenses}
+        onBudgetChange={setBudget}
+        onExpensesChange={setCategoryExpenses}
+      />
+
       <ShoppingList initialItems={shoppingItems} />
-      <ExtraExpenses initialExpenses={extraExpenses} />
+
+      <ExtraExpenses
+        initialExpenses={initialExtraExpenses}
+        onChange={setExtraExpenses}
+      />
     </div>
   );
 }

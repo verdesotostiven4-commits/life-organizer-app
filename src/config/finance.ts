@@ -12,19 +12,21 @@ export const INCOME_MAIN_CATEGORIES: IncomeMainCategory[] = [
 export const INCOME_SUB_CATEGORIES: Record<IncomeMainCategory, string[]> = {
   "Fotografía & Video": [
     "Sesión de fotos",
+    "Video de boda / evento",
     "Edición / Post-producción",
-    "Video eventos",
     "Impresión / Álbumes",
     "Alquiler de equipo",
   ],
   "Sistemas / Programación": [
     "Desarrollo web",
     "App móvil",
+    "Venta de aplicación",
     "Mantenimiento / Soporte",
     "Consultoría",
     "Freelance / Plataforma",
   ],
   "Ingresos Extras": [
+    "Mensual / apoyo familiar",
     "Ventas",
     "Reembolso",
     "Préstamo recibido",
@@ -34,7 +36,7 @@ export const INCOME_SUB_CATEGORIES: Record<IncomeMainCategory, string[]> = {
 };
 
 /** Presets rápidos de % de ahorro al registrar un ingreso. */
-export const SAVINGS_PRESETS = [0, 10, 15, 20, 30, 50] as const;
+export const SAVINGS_PRESETS = [0, 10, 15, 20, 30, 50, 100] as const;
 
 export const ACCOUNT_KIND_LABELS: Record<AccountKind, { label: string; emoji: string }> = {
   banco: { label: "Banco", emoji: "🏦" },

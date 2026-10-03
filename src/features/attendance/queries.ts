@@ -7,6 +7,7 @@ export type AttendanceRecord = {
   session_id: string;
   session_date: string;
   status: AttendanceStatus;
+  note: string;
 };
 
 /** Trae todos los registros de asistencia del usuario para un rango de fechas. */
@@ -22,7 +23,7 @@ export async function getAttendanceRange(
 
   const { data, error } = await supabase
     .from("attendance")
-    .select("session_id, session_date, status")
+    .select("session_id, session_date, status, note")
     .eq("user_id", user.id)
     .gte("session_date", startDate)
     .lte("session_date", endDate);
@@ -32,11 +33,12 @@ export async function getAttendanceRange(
   return (data ?? []) as AttendanceRecord[];
 }
 
-/** Inserta o actualiza la asistencia de una sesión en una fecha. */
+/** Inserta o actualiza asistencia y nota para una sesión en una fecha. */
 export async function saveAttendance(
   sessionId: string,
   sessionDate: string,
   status: AttendanceStatus,
+  note = "",
 ): Promise<void> {
   const supabase = await createClient();
   const {
@@ -44,15 +46,13 @@ export async function saveAttendance(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("No autenticado");
 
-  // Nota: @supabase/ssr 0.12.7 no prop el genérico Database en upsert().
-  // El cast a any evita el error de tipos sin perder safety en runtime.
   const { error } = await supabase.from("attendance").upsert(
     {
       user_id: user.id,
       session_id: sessionId,
       session_date: sessionDate,
       status,
-      note: "",
+      note: note.trim(),
     } as never,
     {
       onConflict: "user_id, session_id, session_date",
