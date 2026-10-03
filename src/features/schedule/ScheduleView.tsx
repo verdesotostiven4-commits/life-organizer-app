@@ -36,8 +36,18 @@ type SummaryItem = {
   attendance_pct: number | null;
 };
 
-function recordsToMap(records: AttendanceRecord[]): Map<string, AttendanceStatus> {
-  return new Map(records.map((r) => [`${r.session_id}:${r.session_date}`, r.status]));
+function recordsToStatusMap(records: AttendanceRecord[]): Map<string, AttendanceStatus> {
+  return new Map(records.map((record) => [
+    `${record.session_id}:${record.session_date}`,
+    record.status,
+  ]));
+}
+
+function recordsToNoteMap(records: AttendanceRecord[]): Map<string, string> {
+  return new Map(records.map((record) => [
+    `${record.session_id}:${record.session_date}`,
+    record.note,
+  ]));
 }
 
 /** Ajusta el resumen local tras un cambio de estado de asistencia (sin re-fetch). */
@@ -48,20 +58,20 @@ function adjustSummary(
   newStatus: AttendanceStatus | null,
 ): SummaryItem[] {
   if (!subjectId) return summary;
-  return summary.map((s) => {
-    if (s.subject_id !== subjectId) return s;
-    let { attended, missed, cancelled } = s;
-    // Quitar el estado anterior.
+  return summary.map((item) => {
+    if (item.subject_id !== subjectId) return item;
+    let { attended, missed, cancelled } = item;
     if (oldStatus === "asisti") attended -= 1;
     else if (oldStatus === "falta") missed -= 1;
     else if (oldStatus === "no_hubo") cancelled -= 1;
-    // Sumar el nuevo estado.
+
     if (newStatus === "asisti") attended += 1;
     else if (newStatus === "falta") missed += 1;
     else if (newStatus === "no_hubo") cancelled += 1;
+
     const total = attended + missed;
     return {
-      ...s,
+      ...item,
       attended,
       missed,
       cancelled,
@@ -77,21 +87,20 @@ export function ScheduleView({
 }: ScheduleViewProps) {
   const today = useMemo(() => toISODate(), []);
   const [currentMonday, setCurrentMonday] = useState(mondayOf(today));
-  const [attendance, setAttendance] = useState(() =>
-    recordsToMap(initialAttendance),
-  );
+  const [attendance, setAttendance] = useState(() => recordsToStatusMap(initialAttendance));
+  const [notes, setNotes] = useState(() => recordsToNoteMap(initialAttendance));
   const [summary, setSummary] = useState<SummaryItem[]>(initialSummary);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSession, setModalSession] = useState<SessionWithSubject | null>(null);
   const [modalDate, setModalDate] = useState(today);
 
-  // Refrescar asistencia cuando cambia la semana visible.
   useEffect(() => {
     const start = currentMonday;
     const end = addDays(currentMonday, 6);
     getAttendanceRange(start, end).then((records) => {
-      setAttendance(recordsToMap(records));
+      setAttendance(recordsToStatusMap(records));
+      setNotes(recordsToNoteMap(records));
     });
   }, [currentMonday]);
 
@@ -105,85 +114,95 @@ export function ScheduleView({
     sessionId: string,
     date: string,
     status: AttendanceStatus,
+    note: string,
   ) => {
     const key = `${sessionId}:${date}`;
     const prevStatus = attendance.get(key) ?? null;
+    const prevNote = notes.get(key) ?? "";
     const subjectId = modalSession?.subject_id;
 
-    // 1. Actualización optimista inmediata en la grilla.
-    const optimisticMap = new Map(attendance);
-    optimisticMap.set(key, status);
-    setAttendance(optimisticMap);
+    const optimisticAttendance = new Map(attendance);
+    optimisticAttendance.set(key, status);
+    setAttendance(optimisticAttendance);
 
-    // 2. Recalcular resumen local (sin re-fetch).
-    setSummary((prev) => adjustSummary(prev, subjectId, prevStatus, status));
+    const optimisticNotes = new Map(notes);
+    optimisticNotes.set(key, note.trim());
+    setNotes(optimisticNotes);
 
-    // 3. Cerrar el modal instantáneamente (0 ms).
+    setSummary((current) => adjustSummary(current, subjectId, prevStatus, status));
     setModalOpen(false);
 
-    // 4. Sincronizar con Supabase en segundo plano; rollback si falla.
     try {
-      await saveAttendance(sessionId, date, status);
-    } catch (err) {
-      console.error("Error al guardar asistencia:", err);
-      const rollbackMap = new Map(attendance);
-      if (prevStatus) {
-        rollbackMap.set(key, prevStatus);
-      } else {
-        rollbackMap.delete(key);
-      }
-      setAttendance(rollbackMap);
-      setSummary((prev) => adjustSummary(prev, subjectId, status, prevStatus));
+      await saveAttendance(sessionId, date, status, note);
+    } catch (error) {
+      console.error("Error al guardar asistencia:", error);
+
+      const rollbackAttendance = new Map(attendance);
+      if (prevStatus) rollbackAttendance.set(key, prevStatus);
+      else rollbackAttendance.delete(key);
+      setAttendance(rollbackAttendance);
+
+      const rollbackNotes = new Map(notes);
+      if (prevNote) rollbackNotes.set(key, prevNote);
+      else rollbackNotes.delete(key);
+      setNotes(rollbackNotes);
+
+      setSummary((current) => adjustSummary(current, subjectId, status, prevStatus));
     }
   };
 
   const handleDelete = async (sessionId: string, date: string) => {
     const key = `${sessionId}:${date}`;
     const prevStatus = attendance.get(key) ?? null;
+    const prevNote = notes.get(key) ?? "";
     const subjectId = modalSession?.subject_id;
 
-    // 1. Actualización optimista inmediata.
-    const optimisticMap = new Map(attendance);
-    optimisticMap.delete(key);
-    setAttendance(optimisticMap);
+    const optimisticAttendance = new Map(attendance);
+    optimisticAttendance.delete(key);
+    setAttendance(optimisticAttendance);
 
-    // 2. Recalcular resumen local.
-    setSummary((prev) => adjustSummary(prev, subjectId, prevStatus, null));
+    const optimisticNotes = new Map(notes);
+    optimisticNotes.delete(key);
+    setNotes(optimisticNotes);
 
-    // 3. Cerrar el modal instantáneamente.
+    setSummary((current) => adjustSummary(current, subjectId, prevStatus, null));
     setModalOpen(false);
 
-    // 4. Sincronizar con Supabase; rollback si falla.
     try {
       await deleteAttendance(sessionId, date);
-    } catch (err) {
-      console.error("Error al borrar asistencia:", err);
-      const rollbackMap = new Map(attendance);
-      if (prevStatus) {
-        rollbackMap.set(key, prevStatus);
-      }
-      setAttendance(rollbackMap);
-      setSummary((prev) => adjustSummary(prev, subjectId, null, prevStatus));
+    } catch (error) {
+      console.error("Error al borrar asistencia:", error);
+
+      const rollbackAttendance = new Map(attendance);
+      if (prevStatus) rollbackAttendance.set(key, prevStatus);
+      setAttendance(rollbackAttendance);
+
+      const rollbackNotes = new Map(notes);
+      if (prevNote) rollbackNotes.set(key, prevNote);
+      setNotes(rollbackNotes);
+
+      setSummary((current) => adjustSummary(current, subjectId, null, prevStatus));
     }
   };
 
   const handleChangeWeek = (delta: number) => {
-    setCurrentMonday((m) => addDays(m, delta * 7));
+    setCurrentMonday((monday) => addDays(monday, delta * 7));
   };
 
-  const initialStatus = modalSession
-    ? (attendance.get(`${modalSession.id}:${modalDate}`) ?? null)
-    : null;
+  const modalKey = modalSession ? `${modalSession.id}:${modalDate}` : "";
+  const initialStatus = modalKey ? (attendance.get(modalKey) ?? null) : null;
+  const initialNote = modalKey ? (notes.get(modalKey) ?? "") : "";
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <WeekGrid
             currentMonday={currentMonday}
             onChangeWeek={handleChangeWeek}
             sessions={sessions}
             attendance={attendance}
+            notes={notes}
             onSessionClick={handleSessionClick}
             today={today}
           />
@@ -194,11 +213,12 @@ export function ScheduleView({
       </div>
 
       <AttendanceModal
-        key={`${modalSession?.id ?? "none"}:${modalDate}:${initialStatus ?? "none"}`}
+        key={`${modalKey}:${initialStatus ?? "none"}:${initialNote}`}
         open={modalOpen}
         session={modalSession}
         initialDate={modalDate}
         initialStatus={initialStatus}
+        initialNote={initialNote}
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         onDelete={initialStatus ? handleDelete : undefined}
