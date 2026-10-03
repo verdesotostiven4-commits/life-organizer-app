@@ -12,7 +12,6 @@ import {
   Droplets,
   GraduationCap,
   LayoutDashboard,
-  Layers3,
   ListChecks,
   LogOut,
   MoreHorizontal,
@@ -31,7 +30,7 @@ const LINKS = [
   { href: "/pantry", label: "Despensa", icon: ShoppingBag },
   { href: "/finance", label: "Finanzas", icon: CreditCard },
   { href: "/academic", label: "Académico", icon: GraduationCap },
-  { href: "/templates", label: "Plantillas", icon: Layers3 },
+  { href: "/templates", label: "Atajos", icon: Sparkles },
   { href: "/stats", label: "Resumen", icon: BarChart3 },
 ] as const;
 
