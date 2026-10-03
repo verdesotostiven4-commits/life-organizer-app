@@ -646,3 +646,67 @@ create index if not exists idx_transactions_to_account on public.transactions(to
 create index if not exists idx_debts_user on public.debts(user_id);
 create index if not exists idx_exam_grades_user on public.exam_grades(user_id);
 create index if not exists idx_exam_grades_subject on public.exam_grades(subject_id);
+
+
+-- ============================================================================
+-- 12. PLANNER_DOCUMENTS — plantillas visuales reutilizables
+-- Cada documento pertenece a un usuario y guarda su contenido editable en JSONB.
+-- ============================================================================
+create table if not exists public.planner_documents (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  template_key  text not null check (
+    template_key in (
+      'monthly',
+      'deliveries_exams',
+      'class_schedule',
+      'daily_study',
+      'weekly',
+      'project'
+    )
+  ),
+  title         text not null,
+  accent        text not null default 'sky' check (
+    accent in ('sky','lavender','rose','sage','sand','mono')
+  ),
+  content       jsonb not null default '{}'::jsonb,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+
+create index if not exists idx_planner_documents_user_updated
+  on public.planner_documents (user_id, updated_at desc);
+
+alter table public.planner_documents enable row level security;
+
+revoke all on table public.planner_documents from anon;
+grant select, insert, update, delete on table public.planner_documents to authenticated;
+
+drop policy if exists "planner_documents_select_own" on public.planner_documents;
+create policy "planner_documents_select_own"
+  on public.planner_documents
+  for select
+  to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "planner_documents_insert_own" on public.planner_documents;
+create policy "planner_documents_insert_own"
+  on public.planner_documents
+  for insert
+  to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "planner_documents_update_own" on public.planner_documents;
+create policy "planner_documents_update_own"
+  on public.planner_documents
+  for update
+  to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "planner_documents_delete_own" on public.planner_documents;
+create policy "planner_documents_delete_own"
+  on public.planner_documents
+  for delete
+  to authenticated
+  using ((select auth.uid()) = user_id);
