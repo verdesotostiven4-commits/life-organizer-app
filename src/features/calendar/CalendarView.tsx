@@ -12,8 +12,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { MONTHS_ES, monthGrid, parseISO, toISODate } from "@/lib/dates";
-import { getCalendarMonth, type CalendarMonthData } from "./queries";
+import { getCalendarMonth, type CalendarMonthData, type CalendarTask } from "./queries";
 import { cn } from "@/lib/utils";
+
+type CalendarClass = CalendarMonthData["classes"][number];
 
 const STATUS_LABELS = {
   asisti: "Asistí",
@@ -59,7 +61,7 @@ export function CalendarView({
   );
 
   const tasksByDate = useMemo(() => {
-    const map = new Map<string, typeof data.tasks>();
+    const map = new Map<string, CalendarTask[]>();
     for (const task of data.tasks) {
       const current = map.get(task.due_date);
       if (current) current.push(task);
@@ -69,7 +71,7 @@ export function CalendarView({
   }, [data.tasks]);
 
   const classesByDay = useMemo(() => {
-    const map = new Map<number, typeof data.classes>();
+    const map = new Map<number, CalendarClass[]>();
     for (const session of data.classes) {
       const current = map.get(session.day_of_week);
       if (current) current.push(session);
