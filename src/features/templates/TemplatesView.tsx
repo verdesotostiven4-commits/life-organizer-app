@@ -8,7 +8,6 @@ import {
   ClipboardCheck,
   Clock3,
   Columns3,
-  FileText,
   FolderKanban,
   GraduationCap,
   Palette,
