@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   ShoppingBag,
   Sparkles,
+  Layers3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ const LINKS = [
   { href: "/pantry", label: "Despensa", icon: ShoppingBag },
   { href: "/finance", label: "Finanzas", icon: CreditCard },
   { href: "/academic", label: "Académico", icon: GraduationCap },
-  { href: "/templates", label: "Atajos", icon: Sparkles },
+  { href: "/templates", label: "Plantillas", icon: Layers3 },
   { href: "/stats", label: "Resumen", icon: BarChart3 },
 ] as const;
 
