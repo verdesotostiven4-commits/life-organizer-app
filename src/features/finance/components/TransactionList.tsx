@@ -30,15 +30,21 @@ const TYPE_META: Record<
     icon: ArrowLeftRight,
     color: "text-amber-600 bg-amber-50",
     sign: "",
-    label: "Retiro",
+    label: "Transferencia",
   },
 };
+
+const dateFormatter = new Intl.DateTimeFormat("es-EC", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
 
 export function TransactionList({ transactions }: TransactionListProps) {
   if (transactions.length === 0) {
     return (
-      <p className="text-sm text-lila-400 text-center py-6">
-        Sin transacciones todavía. Registra tu primer ingreso o gasto.
+      <p className="py-6 text-center text-sm text-lila-400">
+        Sin movimientos todavía. Registra tu primer ingreso o gasto.
       </p>
     );
   }
@@ -51,36 +57,37 @@ export function TransactionList({ transactions }: TransactionListProps) {
         return (
           <div
             key={tx.id}
-            className="flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-lila-50/50 transition-colors"
+            className="flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-lila-50/50"
           >
-            <div
-              className={cn(
-                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                meta.color,
-              )}
-            >
+            <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", meta.color)}>
               <Icon className="h-4 w-4" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-lila-900 truncate">
-                {tx.description}
-              </p>
-              <div className="flex items-center gap-1.5 text-[10px] text-lila-400">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-lila-900">{tx.description}</p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[10px] text-lila-400">
                 <span>{meta.label}</span>
                 <span>·</span>
+                <span>{dateFormatter.format(new Date(tx.created_at))}</span>
+                <span>·</span>
                 <span className="truncate">{tx.account_name}</span>
-                {tx.sub_category && (
+                {tx.to_account_name ? (
+                  <>
+                    <span>→</span>
+                    <span className="truncate">{tx.to_account_name}</span>
+                  </>
+                ) : null}
+                {tx.sub_category ? (
                   <>
                     <span>·</span>
                     <span className="truncate">{tx.sub_category}</span>
                   </>
-                )}
+                ) : null}
               </div>
             </div>
-            <div className="text-right shrink-0">
+            <div className="shrink-0 text-right">
               <p
                 className={cn(
-                  "text-sm font-bold",
+                  "text-sm font-black",
                   tx.type === "ingreso"
                     ? "text-emerald-600"
                     : tx.type === "gasto"
@@ -88,14 +95,13 @@ export function TransactionList({ transactions }: TransactionListProps) {
                       : "text-amber-600",
                 )}
               >
-                {meta.sign}
-                {formatCurrency(tx.amount)}
+                {meta.sign}{formatCurrency(tx.amount)}
               </p>
-              {tx.savings_amount > 0 && (
-                <p className="text-[10px] text-amber-600">
-                  ↳ {formatCurrency(tx.savings_amount)} a ahorros
+              {tx.savings_amount > 0 ? (
+                <p className="text-[10px] font-medium text-amber-600">
+                  {tx.savings_pct}% · {formatCurrency(tx.savings_amount)} ahorrado
                 </p>
-              )}
+              ) : null}
             </div>
           </div>
         );
