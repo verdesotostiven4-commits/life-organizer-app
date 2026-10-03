@@ -33,13 +33,11 @@ export async function getCalendarMonth(year: number, month0: number): Promise<Ca
   if (!user) return { tasks: [], water: [] };
 
   const { start, end } = monthBounds(year, month0);
-
   const [tasksResult, waterResult] = await Promise.all([
     supabase
       .from("tasks")
       .select("id, title, due_date, completed, priority")
       .eq("user_id", user.id)
-      .not("due_date", "is", null)
       .gte("due_date", start)
       .lte("due_date", end)
       .order("priority", { ascending: false }),
@@ -55,7 +53,7 @@ export async function getCalendarMonth(year: number, month0: number): Promise<Ca
   if (waterResult.error) throw waterResult.error;
 
   return {
-    tasks: (tasksResult.data ?? []) as CalendarTask[],
+    tasks: (tasksResult.data ?? []).filter((task) => task.due_date !== null) as CalendarTask[],
     water: (waterResult.data ?? []) as CalendarWater[],
   };
 }
