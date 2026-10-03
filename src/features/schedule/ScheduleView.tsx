@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SessionWithSubject } from "@/features/schedule/queries";
 import {
   getAttendanceRange,
@@ -86,7 +86,9 @@ export function ScheduleView({
   initialAttendance,
 }: ScheduleViewProps) {
   const today = useMemo(() => toISODate(), []);
-  const [currentMonday, setCurrentMonday] = useState(mondayOf(today));
+  const initialMonday = useMemo(() => mondayOf(today), [today]);
+  const [currentMonday, setCurrentMonday] = useState(initialMonday);
+  const firstWeekRef = useRef(initialMonday);
   const [attendance, setAttendance] = useState(() => recordsToStatusMap(initialAttendance));
   const [notes, setNotes] = useState(() => recordsToNoteMap(initialAttendance));
   const [summary, setSummary] = useState<SummaryItem[]>(initialSummary);
@@ -96,6 +98,9 @@ export function ScheduleView({
   const [modalDate, setModalDate] = useState(today);
 
   useEffect(() => {
+    // La primera semana ya llegó renderizada desde el servidor.
+    if (currentMonday === firstWeekRef.current) return;
+
     const start = currentMonday;
     const end = addDays(currentMonday, 6);
     getAttendanceRange(start, end).then((records) => {
