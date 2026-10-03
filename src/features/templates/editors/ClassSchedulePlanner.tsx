@@ -44,8 +44,8 @@ export function ClassSchedulePlanner({
               <div className={cn("border-b border-r p-2 text-xs font-black", theme.header, theme.border)}>Hora</div>
               {DAYS.map((day) => <div key={day} className={cn("border-b border-r p-2 text-xs font-black last:border-r-0", theme.header, theme.border, theme.text)}>{day}</div>)}
               {HOURS.map((hour) => (
-                <>
-                  <div key={`${hour}-label`} className={cn("border-b border-r bg-slate-50 p-2 font-mono text-[11px] font-bold text-slate-600", theme.border)}>{hour}</div>
+                <div key={hour} className="contents">
+                  <div className={cn("border-b border-r bg-slate-50 p-2 font-mono text-[11px] font-bold text-slate-600", theme.border)}>{hour}</div>
                   {DAYS.map((day) => {
                     const key=`${day}-${hour}`;
                     return (
@@ -59,7 +59,7 @@ export function ClassSchedulePlanner({
                       </div>
                     );
                   })}
-                </>
+                </div>
               ))}
             </div>
           </div>
