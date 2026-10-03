@@ -1,246 +1,358 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
-  ArrowRight,
+  BookOpen,
   CalendarDays,
-  CheckCircle2,
+  ClipboardCheck,
   Clock3,
-  ListChecks,
-  Sparkles,
+  Columns3,
+  FolderKanban,
+  GraduationCap,
+  Palette,
+  Plus,
+  Trash2,
 } from "lucide-react";
-import { createTasksIfMissing } from "@/features/tasks/queries";
-import type { Priority, TaskCategory } from "@/types/domain";
+import { ACCENTS, TEMPLATE_CATALOG } from "./catalog";
+import {
+  createPlannerDocument,
+  deletePlannerDocument,
+} from "./queries";
+import { PLANNER_THEMES } from "./theme";
+import type {
+  PlannerAccent,
+  PlannerDocument,
+  PlannerTemplateKey,
+} from "./types";
+import { cn } from "@/lib/utils";
 
-type ShortcutTask = {
-  title: string;
-  category: TaskCategory;
-  priority: Priority;
-};
+const ICONS = {
+  monthly: CalendarDays,
+  deliveries_exams: ClipboardCheck,
+  class_schedule: Clock3,
+  daily_study: BookOpen,
+  weekly: Columns3,
+  project: FolderKanban,
+} satisfies Record<PlannerTemplateKey, typeof CalendarDays>;
 
-type Shortcut = {
-  id: string;
-  title: string;
-  description: string;
-  result: string;
-  tone: string;
-  tasks: ShortcutTask[];
-};
+function Preview({ type, accent }: { type: PlannerTemplateKey; accent: PlannerAccent }) {
+  const theme = PLANNER_THEMES[accent];
 
-const SHORTCUTS: Shortcut[] = [
-  {
-    id: "university-day",
-    title: "Día universitario",
-    description: "Para empezar un día de clases con lo básico bajo control.",
-    result: "Añade 3 tareas de estudio para hoy.",
-    tone: "border-purple-100 bg-purple-50/60",
-    tasks: [
-      { title: "Revisar tareas y entregas del día", category: "estudio", priority: 4 },
-      { title: "Preparar materiales y mochila", category: "estudio", priority: 3 },
-      { title: "Repasar 30 minutos", category: "estudio", priority: 3 },
-    ],
-  },
-  {
-    id: "personal-routine",
-    title: "Rutina personal",
-    description: "Para no olvidar tus básicos personales cuando estás ocupada.",
-    result: "Añade 3 tareas personales para hoy.",
-    tone: "border-sky-100 bg-sky-50/60",
-    tasks: [
-      { title: "Hacer la cama", category: "personal", priority: 2 },
-      { title: "Cuidado de la piel", category: "personal", priority: 2 },
-      { title: "Preparar agua para el día", category: "personal", priority: 2 },
-    ],
-  },
-  {
-    id: "weekly-close",
-    title: "Cierre semanal",
-    description: "Para cerrar la semana y dejar ordenado lo importante.",
-    result: "Añade 3 tareas de revisión para hoy.",
-    tone: "border-emerald-100 bg-emerald-50/60",
-    tasks: [
-      { title: "Revisar gastos e ingresos de la semana", category: "personal", priority: 3 },
-      { title: "Actualizar notas y asistencia", category: "estudio", priority: 3 },
-      { title: "Planificar pendientes de la próxima semana", category: "personal", priority: 3 },
-    ],
-  },
-];
+  if (type === "monthly") {
+    return (
+      <div className={cn("rounded-2xl border p-3", theme.border, theme.page)}>
+        <div className={cn("mb-2 h-3 w-28 rounded-full", theme.header)} />
+        <div className="grid grid-cols-7 gap-1">
+          {Array.from({ length: 21 }, (_, i) => (
+            <div key={i} className={cn("h-8 rounded-md border bg-white", theme.border)} />
+          ))}
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-1">
+          {Array.from({ length: 3 }, (_, i) => (
+            <div key={i} className={cn("h-8 rounded-md", theme.header)} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-type ShortcutResult = {
-  id: string;
-  created: number;
-} | null;
+  if (type === "deliveries_exams") {
+    return (
+      <div className={cn("rounded-2xl border p-3", theme.border, theme.page)}>
+        <div className={cn("mb-2 h-3 w-32 rounded-full", theme.header)} />
+        <div className="space-y-1">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="grid grid-cols-[1fr_1.5fr_.8fr_.7fr] gap-1">
+              {Array.from({ length: 4 }, (_, j) => (
+                <div key={j} className={cn("h-6 rounded border bg-white", theme.border)} />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className={cn("mt-2 h-10 rounded-lg", theme.header)} />
+      </div>
+    );
+  }
 
-export function TemplatesView({ today }: { today: string }) {
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [result, setResult] = useState<ShortcutResult>(null);
-  const [errorId, setErrorId] = useState<string | null>(null);
+  if (type === "class_schedule") {
+    return (
+      <div className={cn("rounded-2xl border p-3", theme.border, theme.page)}>
+        <div className="grid grid-cols-6 gap-1">
+          {Array.from({ length: 30 }, (_, i) => (
+            <div
+              key={i}
+              className={cn(
+                "h-7 rounded border",
+                theme.border,
+                i < 6 ? theme.header : "bg-white",
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-  const applyShortcut = async (shortcut: Shortcut) => {
-    setLoadingId(shortcut.id);
-    setResult(null);
-    setErrorId(null);
+  if (type === "daily_study") {
+    return (
+      <div className={cn("grid grid-cols-[.85fr_1.15fr] gap-2 rounded-2xl border p-3", theme.border, theme.page)}>
+        <div className="space-y-1">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className={cn("h-6 rounded border bg-white", theme.border)} />
+          ))}
+        </div>
+        <div className="space-y-2">
+          <div className={cn("h-10 rounded-lg", theme.header)} />
+          <div className={cn("h-16 rounded-lg border bg-white", theme.border)} />
+          <div className="grid grid-cols-5 gap-1">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div key={i} className={cn("aspect-square rounded-full border bg-white", theme.border)} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  if (type === "weekly") {
+    return (
+      <div className={cn("rounded-2xl border p-3", theme.border, theme.page)}>
+        <div className="grid grid-cols-4 gap-1">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className={cn("h-16 rounded-lg border bg-white p-1", theme.border)}>
+              <div className={cn("mb-1 h-2 w-8 rounded", theme.header)} />
+              <div className="space-y-1">
+                <div className="h-1 rounded bg-slate-200" />
+                <div className="h-1 rounded bg-slate-200" />
+                <div className="h-1 rounded bg-slate-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("rounded-2xl border p-3", theme.border, theme.page)}>
+      <div className={cn("mb-2 h-3 w-28 rounded-full", theme.header)} />
+      <div className="grid grid-cols-3 gap-2">
+        {["Pendiente", "En curso", "Hecho"].map((label) => (
+          <div key={label} className={cn("rounded-lg border bg-white p-2", theme.border)}>
+            <div className="mb-2 h-2 w-12 rounded bg-slate-200" />
+            <div className="space-y-1">
+              <div className={cn("h-6 rounded", theme.header)} />
+              <div className={cn("h-6 rounded", theme.header)} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function TemplatesView({ documents }: { documents: PlannerDocument[] }) {
+  const router = useRouter();
+  const defaults = useMemo(
+    () =>
+      Object.fromEntries(
+        TEMPLATE_CATALOG.map((item) => [item.key, item.accent]),
+      ) as Record<PlannerTemplateKey, PlannerAccent>,
+    [],
+  );
+  const [accents, setAccents] = useState(defaults);
+  const [creating, setCreating] = useState<PlannerTemplateKey | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const createDocument = async (key: PlannerTemplateKey) => {
+    setCreating(key);
     try {
-      const response = await createTasksIfMissing({
-        due_date: today,
-        tasks: shortcut.tasks,
-      });
-
-      setResult({
-        id: shortcut.id,
-        created: response.created,
-      });
-    } catch (error) {
-      console.error("Error al aplicar atajo:", error);
-      setErrorId(shortcut.id);
+      const id = await createPlannerDocument(key, accents[key]);
+      router.push(`/templates/${id}`);
     } finally {
-      setLoadingId(null);
+      setCreating(null);
+    }
+  };
+
+  const removeDocument = async (id: string) => {
+    if (!window.confirm("¿Eliminar esta plantilla guardada?")) return;
+    setDeleting(id);
+    try {
+      await deletePlannerDocument(id);
+      router.refresh();
+    } finally {
+      setDeleting(null);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-purple-100 bg-gradient-to-r from-purple-50 via-white to-indigo-50 p-5 sm:p-6">
+    <div className="space-y-8">
+      <section className="rounded-3xl border border-purple-100 bg-gradient-to-r from-purple-50 via-white to-sky-50 p-5 sm:p-6">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-purple-600 shadow-sm">
-            <Sparkles className="h-5 w-5" />
+            <Palette className="h-5 w-5" />
           </span>
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-purple-600">
-              Funciona así
+              Qué es una plantilla
             </p>
             <h2 className="mt-1 text-base font-black text-slate-950">
-              Un atajo crea varias tareas de una sola vez
+              Un formato visual reutilizable que tú llenas a tu manera
             </h2>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
-              Elige uno de abajo y Harmony OS añadirá esas tareas a <strong>Tareas</strong> con fecha de hoy. No modifica tu horario, tus finanzas ni otros datos.
+              Escoge el diseño que necesites, elige un color y crea tu propia copia. Puedes usar una plantilla para un mes, una semana, un día de estudio, entregas, horario o un proyecto específico.
             </p>
           </div>
         </div>
-
-        <div className="mt-5 grid gap-2 sm:grid-cols-3">
-          {[
-            ["1", "Elige un atajo"],
-            ["2", "Se crean las tareas"],
-            ["3", "Las completas en Tareas"],
-          ].map(([step, label]) => (
-            <div key={step} className="flex items-center gap-2 rounded-2xl border border-white bg-white/75 px-3 py-2.5">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-600 text-[11px] font-black text-white">
-                {step}
-              </span>
-              <span className="text-xs font-bold text-slate-700">{label}</span>
-            </div>
-          ))}
-        </div>
       </section>
+
+      {documents.length > 0 ? (
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-black text-slate-900">Mis plantillas</h2>
+              <p className="text-xs text-slate-400">Se guardan en tu cuenta y puedes abrirlas desde PC o celular.</p>
+            </div>
+            <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-black text-purple-700">
+              {documents.length} guardada{documents.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {documents.map((document) => {
+              const meta = TEMPLATE_CATALOG.find((item) => item.key === document.template_key)!;
+              const Icon = ICONS[document.template_key];
+              const theme = PLANNER_THEMES[document.accent];
+
+              return (
+                <article
+                  key={document.id}
+                  className={cn("rounded-3xl border bg-white p-4 shadow-sm", theme.border)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/templates/${document.id}`)}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl", theme.header, theme.text)}>
+                        <Icon className="h-4.5 w-4.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-black text-slate-900">{document.title}</p>
+                        <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{meta.short} · {theme.label}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <Preview type={document.template_key} accent={document.accent} />
+                    </div>
+                  </button>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/templates/${document.id}`)}
+                      className="min-h-10 flex-1 rounded-xl bg-slate-950 px-3 text-xs font-black text-white hover:bg-purple-700"
+                    >
+                      Abrir
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(document.id)}
+                      disabled={deleting === document.id}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                      aria-label="Eliminar plantilla"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section>
         <div className="mb-3">
-          <h2 className="text-sm font-black text-slate-900">Atajos disponibles</h2>
-          <p className="text-xs text-slate-400">Úsalos solo cuando te sirvan. Si pulsas dos veces, no duplica las mismas tareas del día.</p>
+          <h2 className="text-sm font-black text-slate-900">Biblioteca de formatos</h2>
+          <p className="text-xs text-slate-400">Elige el formato; después puedes cambiar el color dentro del editor.</p>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          {SHORTCUTS.map((shortcut) => {
-            const isLoading = loadingId === shortcut.id;
-            const shortcutResult = result?.id === shortcut.id ? result : null;
-            const hasError = errorId === shortcut.id;
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {TEMPLATE_CATALOG.map((template) => {
+            const Icon = ICONS[template.key];
+            const accent = accents[template.key];
+            const theme = PLANNER_THEMES[accent];
 
             return (
-              <article key={shortcut.id} className={`rounded-3xl border p-5 ${shortcut.tone}`}>
-                <div className="flex items-center gap-2">
-                  <ListChecks className="h-4 w-4 text-purple-600" />
-                  <h3 className="text-sm font-black text-slate-900">{shortcut.title}</h3>
+              <article
+                key={template.key}
+                className={cn("rounded-3xl border bg-white p-5", theme.border)}
+              >
+                <div className="flex items-start gap-3">
+                  <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl", theme.header, theme.text)}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">{template.format}</p>
+                    <h3 className="mt-0.5 text-sm font-black text-slate-950">{template.title}</h3>
+                  </div>
                 </div>
 
-                <p className="mt-2 text-xs leading-relaxed text-slate-500">{shortcut.description}</p>
+                <p className="mt-3 min-h-12 text-xs leading-relaxed text-slate-500">{template.description}</p>
 
-                <div className="mt-4 rounded-2xl bg-white/80 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                    Al usarlo
-                  </p>
-                  <p className="mt-1 text-xs font-bold text-slate-700">{shortcut.result}</p>
+                <div className="mt-4">
+                  <Preview type={template.key} accent={accent} />
                 </div>
 
-                <div className="mt-3 space-y-2">
-                  {shortcut.tasks.map((task) => (
-                    <div key={task.title} className="flex items-center gap-2 rounded-xl bg-white/75 px-3 py-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-purple-500" />
-                      <span className="text-[11px] font-semibold text-slate-600">{task.title}</span>
-                    </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="mr-1 text-[10px] font-bold text-slate-400">Color</span>
+                  {ACCENTS.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      title={item.label}
+                      onClick={() =>
+                        setAccents((current) => ({ ...current, [template.key]: item.key }))
+                      }
+                      className={cn(
+                        "h-6 w-6 rounded-full border-2 transition-transform hover:scale-110",
+                        item.dot,
+                        accent === item.key ? "border-slate-800 ring-2 ring-slate-200" : "border-white",
+                      )}
+                      aria-label={`Usar color ${item.label}`}
+                    />
                   ))}
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => applyShortcut(shortcut)}
-                  disabled={loadingId !== null}
-                  className="mt-4 min-h-11 w-full rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-black text-white transition-colors duration-100 hover:bg-purple-700 disabled:opacity-50"
+                  onClick={() => createDocument(template.key)}
+                  disabled={creating !== null}
+                  className={cn(
+                    "mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-xs font-black text-white transition-colors disabled:opacity-50",
+                    theme.button,
+                  )}
                 >
-                  {isLoading
-                    ? "Añadiendo…"
-                    : shortcutResult
-                      ? shortcutResult.created > 0
-                        ? `✓ ${shortcutResult.created} tareas añadidas`
-                        : "✓ Ya estaban añadidas hoy"
-                      : "Añadir 3 tareas a hoy"}
+                  <Plus className="h-4 w-4" />
+                  {creating === template.key ? "Creando…" : "Crear esta plantilla"}
                 </button>
-
-                {hasError ? (
-                  <p className="mt-2 text-center text-[10px] font-semibold text-rose-600">
-                    No se pudieron crear. Intenta otra vez.
-                  </p>
-                ) : null}
-
-                {shortcutResult ? (
-                  <Link
-                    href="/tasks"
-                    prefetch={true}
-                    className="mt-3 flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white/75 text-xs font-bold text-slate-700 hover:border-purple-200 hover:text-purple-700"
-                  >
-                    Ver mis tareas <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                ) : null}
               </article>
             );
           })}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
-            ¿Buscabas otra cosa?
-          </p>
-          <h2 className="mt-1 text-sm font-black text-slate-900">
-            El horario ya no está mezclado con los atajos
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Para ver tus clases usa Horario. Para revisar clases, tareas y hábitos por fecha usa Calendario.
-          </p>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Link
-            href="/schedule"
-            prefetch={true}
-            className="flex min-h-14 items-center gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 px-4 text-sm font-bold text-purple-800 transition-colors hover:bg-purple-100"
-          >
-            <Clock3 className="h-5 w-5" />
-            <span className="flex-1">Abrir Horario</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/calendar"
-            prefetch={true}
-            className="flex min-h-14 items-center gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 text-sm font-bold text-indigo-800 transition-colors hover:bg-indigo-100"
-          >
-            <CalendarDays className="h-5 w-5" />
-            <span className="flex-1">Abrir Calendario</span>
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+      <section className="rounded-3xl border border-slate-200 bg-white p-5">
+        <div className="flex items-start gap-3">
+          <GraduationCap className="mt-0.5 h-5 w-5 text-indigo-600" />
+          <div>
+            <h2 className="text-sm font-black text-slate-900">Inspiradas en planners universitarios, adaptadas a digital</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Mantienen la idea de las hojas que compartiste —cuadrículas, listas, seguimiento, objetivos y notas— pero aquí cada campo es editable, se guarda en tu cuenta y se adapta a pantalla pequeña.
+            </p>
+          </div>
         </div>
       </section>
     </div>

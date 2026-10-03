@@ -9,6 +9,7 @@
 
 drop view if exists public.attendance_aggregate cascade;
 
+drop table if exists public.planner_documents cascade;
 drop table if exists public.exam_grades cascade;
 drop table if exists public.debts cascade;
 drop table if exists public.transactions cascade;

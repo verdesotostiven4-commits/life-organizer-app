@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppChrome } from "@/components/layout/AppChrome";
@@ -31,7 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-dvh">
-        <AppChrome>{children}</AppChrome>
+        <Suspense fallback={<div className="min-h-dvh">{children}</div>}>
+          <AppChrome>{children}</AppChrome>
+        </Suspense>
       </body>
     </html>
   );

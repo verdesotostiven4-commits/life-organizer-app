@@ -551,6 +551,39 @@ export type Database = {
           },
         ]
       }
+      planner_documents: {
+        Row: {
+          accent: string
+          content: Json
+          created_at: string
+          id: string
+          template_key: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          template_key: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          template_key?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       practice_logs: {
         Row: {
           created_at: string
