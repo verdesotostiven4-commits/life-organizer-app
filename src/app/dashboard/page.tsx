@@ -9,6 +9,7 @@ import {
   GraduationCap,
   ListChecks,
   ShoppingBag,
+  Layers3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getTasks } from "@/features/tasks/queries";
@@ -27,6 +28,7 @@ const MODULES = [
   { href: "/pantry", label: "Despensa", desc: "Compras y presupuesto", icon: ShoppingBag, className: "from-emerald-50 to-teal-50 text-emerald-700 border-emerald-100" },
   { href: "/finance", label: "Finanzas", desc: "Cuentas y ahorros", icon: CreditCard, className: "from-amber-50 to-yellow-50 text-amber-700 border-amber-100" },
   { href: "/academic", label: "Académico", desc: "Prácticas y notas", icon: GraduationCap, className: "from-violet-50 to-purple-50 text-violet-700 border-violet-100" },
+  { href: "/templates", label: "Plantillas", desc: "Formatos y planners", icon: Layers3, className: "from-purple-50 to-sky-50 text-purple-700 border-purple-100" },
   { href: "/stats", label: "Resumen", desc: "Indicadores y progreso", icon: BarChart3, className: "from-slate-50 to-purple-50 text-slate-700 border-slate-200" },
 ] as const;
 
