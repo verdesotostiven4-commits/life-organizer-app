@@ -1,41 +1,40 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import {
+  ArrowRight,
+  CalendarDays,
   CheckCircle2,
   Clock3,
-  CreditCard,
-  Layers3,
   ListChecks,
   Sparkles,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { DOW_SHORT, ESPOCH_SCHEDULE } from "@/config/espoch";
-import { addDays, formatShort, mondayOf } from "@/lib/dates";
-import { createTask } from "@/features/tasks/queries";
+import { createTasksIfMissing } from "@/features/tasks/queries";
 import type { Priority, TaskCategory } from "@/types/domain";
 
-const DAYS = [1, 2, 3, 4, 5] as const;
-const TIMES = Array.from(new Set(ESPOCH_SCHEDULE.map((item) => `${item.start_time}–${item.end_time}`))).sort();
-
-type TemplateTask = {
+type ShortcutTask = {
   title: string;
   category: TaskCategory;
   priority: Priority;
 };
 
-const QUICK_TEMPLATES: {
+type Shortcut = {
   id: string;
   title: string;
   description: string;
+  result: string;
   tone: string;
-  tasks: TemplateTask[];
-}[] = [
+  tasks: ShortcutTask[];
+};
+
+const SHORTCUTS: Shortcut[] = [
   {
     id: "university-day",
     title: "Día universitario",
-    description: "Tres recordatorios básicos para llegar a clases con todo listo.",
-    tone: "border-purple-100 bg-purple-50/50",
+    description: "Para empezar un día de clases con lo básico bajo control.",
+    result: "Añade 3 tareas de estudio para hoy.",
+    tone: "border-purple-100 bg-purple-50/60",
     tasks: [
       { title: "Revisar tareas y entregas del día", category: "estudio", priority: 4 },
       { title: "Preparar materiales y mochila", category: "estudio", priority: 3 },
@@ -45,8 +44,9 @@ const QUICK_TEMPLATES: {
   {
     id: "personal-routine",
     title: "Rutina personal",
-    description: "Un inicio simple para no olvidar tus básicos personales.",
-    tone: "border-sky-100 bg-sky-50/50",
+    description: "Para no olvidar tus básicos personales cuando estás ocupada.",
+    result: "Añade 3 tareas personales para hoy.",
+    tone: "border-sky-100 bg-sky-50/60",
     tasks: [
       { title: "Hacer la cama", category: "personal", priority: 2 },
       { title: "Cuidado de la piel", category: "personal", priority: 2 },
@@ -56,8 +56,9 @@ const QUICK_TEMPLATES: {
   {
     id: "weekly-close",
     title: "Cierre semanal",
-    description: "Ordena estudios, dinero y la siguiente semana en pocos minutos.",
-    tone: "border-emerald-100 bg-emerald-50/50",
+    description: "Para cerrar la semana y dejar ordenado lo importante.",
+    result: "Añade 3 tareas de revisión para hoy.",
+    tone: "border-emerald-100 bg-emerald-50/60",
     tasks: [
       { title: "Revisar gastos e ingresos de la semana", category: "personal", priority: 3 },
       { title: "Actualizar notas y asistencia", category: "estudio", priority: 3 },
@@ -66,174 +67,182 @@ const QUICK_TEMPLATES: {
   },
 ];
 
-export function TemplatesView({ today }: { today: string }) {
-  const router = useRouter();
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [createdId, setCreatedId] = useState<string | null>(null);
-  const monday = mondayOf(today);
+type ShortcutResult = {
+  id: string;
+  created: number;
+} | null;
 
-  const applyTemplate = async (template: (typeof QUICK_TEMPLATES)[number]) => {
-    setLoadingId(template.id);
-    setCreatedId(null);
+export function TemplatesView({ today }: { today: string }) {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [result, setResult] = useState<ShortcutResult>(null);
+  const [errorId, setErrorId] = useState<string | null>(null);
+
+  const applyShortcut = async (shortcut: Shortcut) => {
+    setLoadingId(shortcut.id);
+    setResult(null);
+    setErrorId(null);
+
     try {
-      await Promise.all(
-        template.tasks.map((task) =>
-          createTask({
-            ...task,
-            due_date: today,
-          }),
-        ),
-      );
-      setCreatedId(template.id);
-      router.refresh();
+      const response = await createTasksIfMissing({
+        due_date: today,
+        tasks: shortcut.tasks,
+      });
+
+      setResult({
+        id: shortcut.id,
+        created: response.created,
+      });
     } catch (error) {
-      console.error("Error al aplicar plantilla:", error);
+      console.error("Error al aplicar atajo:", error);
+      setErrorId(shortcut.id);
     } finally {
       setLoadingId(null);
     }
   };
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-purple-50 p-5 sm:p-6">
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-purple-100 bg-gradient-to-r from-purple-50 via-white to-indigo-50 p-5 sm:p-6">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-purple-600 shadow-sm">
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
-            <h2 className="text-sm font-black text-slate-900">¿Para qué sirven las plantillas?</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-purple-600">
+              Funciona así
+            </p>
+            <h2 className="mt-1 text-base font-black text-slate-950">
+              Un atajo crea varias tareas de una sola vez
+            </h2>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-500">
-              Son atajos reutilizables. En vez de escribir las mismas tareas cada semana, eliges una plantilla y Harmony OS crea el grupo por ti. Después puedes editar fecha, prioridad o borrar lo que no necesites.
+              Elige uno de abajo y Harmony OS añadirá esas tareas a <strong>Tareas</strong> con fecha de hoy. No modifica tu horario, tus finanzas ni otros datos.
             </p>
           </div>
         </div>
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+          {[
+            ["1", "Elige un atajo"],
+            ["2", "Se crean las tareas"],
+            ["3", "Las completas en Tareas"],
+          ].map(([step, label]) => (
+            <div key={step} className="flex items-center gap-2 rounded-2xl border border-white bg-white/75 px-3 py-2.5">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-purple-600 text-[11px] font-black text-white">
+                {step}
+              </span>
+              <span className="text-xs font-bold text-slate-700">{label}</span>
+            </div>
+          ))}
+        </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {QUICK_TEMPLATES.map((template) => (
-          <section key={template.id} className={`rounded-3xl border p-5 ${template.tone}`}>
-            <div className="flex items-center gap-2">
-              <ListChecks className="h-4 w-4 text-purple-600" />
-              <h3 className="text-sm font-black text-slate-900">{template.title}</h3>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-slate-500">{template.description}</p>
-            <div className="mt-4 space-y-2">
-              {template.tasks.map((task) => (
-                <div key={task.title} className="rounded-xl bg-white/80 px-3 py-2 text-[11px] font-semibold text-slate-600">
-                  {task.title}
+      <section>
+        <div className="mb-3">
+          <h2 className="text-sm font-black text-slate-900">Atajos disponibles</h2>
+          <p className="text-xs text-slate-400">Úsalos solo cuando te sirvan. Si pulsas dos veces, no duplica las mismas tareas del día.</p>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-3">
+          {SHORTCUTS.map((shortcut) => {
+            const isLoading = loadingId === shortcut.id;
+            const shortcutResult = result?.id === shortcut.id ? result : null;
+            const hasError = errorId === shortcut.id;
+
+            return (
+              <article key={shortcut.id} className={`rounded-3xl border p-5 ${shortcut.tone}`}>
+                <div className="flex items-center gap-2">
+                  <ListChecks className="h-4 w-4 text-purple-600" />
+                  <h3 className="text-sm font-black text-slate-900">{shortcut.title}</h3>
                 </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => applyTemplate(template)}
-              disabled={loadingId !== null}
-              className="mt-4 w-full rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-black text-white transition hover:bg-purple-700 disabled:opacity-50"
-            >
-              {loadingId === template.id
-                ? "Creando…"
-                : createdId === template.id
-                  ? "✓ Añadida a Tareas"
-                  : "Usar plantilla hoy"}
-            </button>
-          </section>
-        ))}
-      </div>
 
-      <section className="rounded-3xl border border-purple-100 bg-white/90 p-5 shadow-sm sm:p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-100 text-purple-700">
-            <Layers3 className="h-5 w-5" />
-          </span>
-          <div>
-            <h2 className="text-sm font-black text-slate-900">Horario oficial ESPOCH · esta semana</h2>
-            <p className="text-xs text-slate-400">
-              La plantilla del horario se repite; las fechas cambian según la semana que estás viviendo.
-            </p>
-          </div>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">{shortcut.description}</p>
+
+                <div className="mt-4 rounded-2xl bg-white/80 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    Al usarlo
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-slate-700">{shortcut.result}</p>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {shortcut.tasks.map((task) => (
+                    <div key={task.title} className="flex items-center gap-2 rounded-xl bg-white/75 px-3 py-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-purple-500" />
+                      <span className="text-[11px] font-semibold text-slate-600">{task.title}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => applyShortcut(shortcut)}
+                  disabled={loadingId !== null}
+                  className="mt-4 min-h-11 w-full rounded-xl bg-slate-950 px-3 py-2.5 text-xs font-black text-white transition-colors duration-100 hover:bg-purple-700 disabled:opacity-50"
+                >
+                  {isLoading
+                    ? "Añadiendo…"
+                    : shortcutResult
+                      ? shortcutResult.created > 0
+                        ? `✓ ${shortcutResult.created} tareas añadidas`
+                        : "✓ Ya estaban añadidas hoy"
+                      : "Añadir 3 tareas a hoy"}
+                </button>
+
+                {hasError ? (
+                  <p className="mt-2 text-center text-[10px] font-semibold text-rose-600">
+                    No se pudieron crear. Intenta otra vez.
+                  </p>
+                ) : null}
+
+                {shortcutResult ? (
+                  <Link
+                    href="/tasks"
+                    prefetch={true}
+                    className="mt-3 flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white/75 text-xs font-bold text-slate-700 hover:border-purple-200 hover:text-purple-700"
+                  >
+                    Ver mis tareas <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
-
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full min-w-[820px] border-collapse text-xs">
-            <thead>
-              <tr className="bg-purple-50 text-purple-900">
-                <th className="border-b border-r border-purple-100 p-3 text-left">Hora</th>
-                {DAYS.map((day) => (
-                  <th key={day} className="border-b border-r border-purple-100 p-3 text-left last:border-r-0">
-                    <span className="block font-black">{DOW_SHORT[day]}</span>
-                    <span className="mt-0.5 block text-[10px] font-medium text-purple-500">
-                      {formatShort(addDays(monday, day - 1))}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {TIMES.map((time) => (
-                <tr key={time} className="hover:bg-slate-50">
-                  <td className="border-b border-r border-slate-100 bg-slate-50 p-3 font-mono font-bold text-slate-700">{time}</td>
-                  {DAYS.map((day) => {
-                    const item = ESPOCH_SCHEDULE.find(
-                      (session) =>
-                        session.day_of_week === day &&
-                        `${session.start_time}–${session.end_time}` === time,
-                    );
-                    return (
-                      <td key={day} className="border-b border-r border-slate-100 p-3 align-top last:border-r-0">
-                        {item ? (
-                          <>
-                            <p className="font-bold text-slate-800">{item.subject_name}</p>
-                            <p className="mt-1 text-[10px] text-slate-400">{item.room}</p>
-                          </>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="mt-3 text-[11px] text-slate-400">
-          Para marcar “Asistí / Falta / No hubo” y escribir notas de cada clase, usa <strong className="text-purple-700">Horario</strong>.
-        </p>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <section className="rounded-3xl border border-rose-100 bg-gradient-to-br from-white to-rose-50 p-5">
-          <CheckCircle2 className="h-5 w-5 text-rose-600" />
-          <h3 className="mt-4 text-sm font-black text-slate-900">Prioridades del día</h3>
-          <div className="mt-3 space-y-2">
-            {["Máxima / Hoy", "Alta", "Media", "Normal", "Sin prisa"].map((label, index) => (
-              <div key={label} className="flex items-center gap-2 text-xs text-slate-600">
-                <span className={["bg-rose-500", "bg-orange-500", "bg-amber-500", "bg-emerald-500", "bg-teal-500"][index] + " h-2.5 w-2.5 rounded-full"} />
-                {label}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-sky-100 bg-gradient-to-br from-white to-sky-50 p-5">
-          <Clock3 className="h-5 w-5 text-sky-600" />
-          <h3 className="mt-4 text-sm font-black text-slate-900">Bloques de enfoque</h3>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {["07–09", "09–11", "11–13", "15–17"].map((time) => (
-              <div key={time} className="rounded-xl bg-white/80 p-3 text-center font-mono text-xs font-bold text-slate-600">{time}</div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-5">
-          <CreditCard className="h-5 w-5 text-emerald-600" />
-          <h3 className="mt-4 text-sm font-black text-slate-900">Regla de ingresos</h3>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">
-            Separa ahorro al registrar cada ingreso y deja que Harmony OS actualice la cuenta y la bóveda de forma atómica.
+      <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+            ¿Buscabas otra cosa?
           </p>
-        </section>
-      </div>
+          <h2 className="mt-1 text-sm font-black text-slate-900">
+            El horario ya no está mezclado con los atajos
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Para ver tus clases usa Horario. Para revisar clases, tareas y hábitos por fecha usa Calendario.
+          </p>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/schedule"
+            prefetch={true}
+            className="flex min-h-14 items-center gap-3 rounded-2xl border border-purple-100 bg-purple-50/60 px-4 text-sm font-bold text-purple-800 transition-colors hover:bg-purple-100"
+          >
+            <Clock3 className="h-5 w-5" />
+            <span className="flex-1">Abrir Horario</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/calendar"
+            prefetch={true}
+            className="flex min-h-14 items-center gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 text-sm font-bold text-indigo-800 transition-colors hover:bg-indigo-100"
+          >
+            <CalendarDays className="h-5 w-5" />
+            <span className="flex-1">Abrir Calendario</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

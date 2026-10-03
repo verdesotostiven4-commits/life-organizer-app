@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Layers3 } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TemplatesView } from "@/features/templates/TemplatesView";
@@ -13,10 +13,10 @@ export default async function TemplatesPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">
       <PageHeader
-        eyebrow="Plantillas & atajos"
-        title="No escribas lo mismo dos veces"
-        description="Crea grupos de tareas reutilizables y consulta el horario oficial con las fechas de la semana actual."
-        icon={<Layers3 className="h-4 w-4" />}
+        eyebrow="Atajos rápidos"
+        title="Haz varias tareas en un solo toque"
+        description="Elige un atajo y Harmony OS crea por ti un pequeño grupo de tareas para hoy."
+        icon={<Sparkles className="h-4 w-4" />}
         tone="purple"
       />
       <TemplatesView today={toISODate()} />
