@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowDownRight, ArrowUpRight, PiggyBank, Plus, Wallet } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Camera,
+  Code2,
+  Gift,
+  PiggyBank,
+  Plus,
+  Wallet,
+} from "lucide-react";
 import type { Account, Transaction, Debt } from "@/features/finance/queries";
 import { recordTransaction } from "@/features/finance/queries";
 import { AccountCard } from "./components/AccountCard";
@@ -25,6 +34,18 @@ interface FinanceViewProps {
   };
 }
 
+const incomeIcon = (category: IncomeMainCategory | null) => {
+  if (category === "Fotografía & Video") return Camera;
+  if (category === "Sistemas / Programación") return Code2;
+  return Gift;
+};
+
+const dateFormatter = new Intl.DateTimeFormat("es-EC", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+
 export function FinanceView({
   accounts: initialAccounts,
   transactions: initialTransactions,
@@ -35,6 +56,15 @@ export function FinanceView({
   const [transactions, setTransactions] = useState(initialTransactions);
   const [summary, setSummary] = useState(initialSummary);
   const [formOpen, setFormOpen] = useState(false);
+
+  const incomes = useMemo(
+    () => transactions.filter((transaction) => transaction.type === "ingreso"),
+    [transactions],
+  );
+  const incomeTotal = useMemo(
+    () => incomes.reduce((sum, transaction) => sum + transaction.amount, 0),
+    [incomes],
+  );
 
   const handleSave = async (input: {
     type: TransactionType;
@@ -148,10 +178,62 @@ export function FinanceView({
         </div>
       </section>
 
+      <Card className="overflow-hidden border-emerald-100">
+        <CardBody>
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">Registro permanente</p>
+              <h3 className="mt-1 text-base font-black text-slate-950">Ingresos recibidos</h3>
+              <p className="text-xs text-slate-400">
+                Cada trabajo queda guardado con cuenta, categoría, ahorro y fecha.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-emerald-50 px-4 py-2 text-right">
+              <p className="text-[10px] font-bold uppercase text-emerald-600">Total visible</p>
+              <p className="text-lg font-black text-emerald-700">{formatCurrency(incomeTotal)}</p>
+            </div>
+          </div>
+
+          {incomes.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-emerald-100 py-7 text-center text-sm text-slate-400">
+              Aún no hay ingresos registrados.
+            </p>
+          ) : (
+            <div className="grid gap-2 lg:grid-cols-2">
+              {incomes.slice(0, 10).map((income) => {
+                const Icon = incomeIcon(income.main_category);
+                return (
+                  <div key={income.id} className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/30 p-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-black text-slate-900">{income.description}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                        {income.sub_category ?? income.main_category ?? "Ingreso"} · {income.account_name} · {dateFormatter.format(new Date(income.created_at))}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-black text-emerald-600">+{formatCurrency(income.amount)}</p>
+                      {income.savings_amount > 0 ? (
+                        <p className="text-[9px] font-semibold text-amber-600">
+                          {formatCurrency(income.savings_amount)} ahorrado
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
       <div className="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
         <Card>
           <CardBody>
-            <h3 className="mb-3 text-sm font-black text-slate-900">Movimientos recientes</h3>
+            <h3 className="mb-1 text-sm font-black text-slate-900">Historial de movimientos</h3>
+            <p className="mb-3 text-xs text-slate-400">Ingresos, gastos y transferencias quedan registrados aquí.</p>
             <TransactionList transactions={transactions} />
           </CardBody>
         </Card>
@@ -162,7 +244,14 @@ export function FinanceView({
         </Card>
       </div>
 
-      <TransactionForm open={formOpen} accounts={accounts} onClose={() => setFormOpen(false)} onSave={handleSave} loading={false} />
+      <TransactionForm
+        key={formOpen ? "finance-open" : "finance-closed"}
+        open={formOpen}
+        accounts={accounts}
+        onClose={() => setFormOpen(false)}
+        onSave={handleSave}
+        loading={false}
+      />
     </div>
   );
 }
