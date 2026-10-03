@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   BookOpen,
@@ -39,6 +39,7 @@ const MOBILE_MORE = LINKS.slice(4);
 
 export function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient();
 
   const isActive = (href: string) =>
@@ -46,7 +47,8 @@ export function NavBar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
+    router.refresh();
   };
 
   return (
