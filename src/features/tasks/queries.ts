@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { Priority, TaskCategory } from "@/types/domain";
 
 export type Task = {
@@ -21,15 +22,13 @@ export type SubjectOption = { id: string; name: string };
 /** Trae todas las materias del usuario (para el select de tareas de estudio). */
 export async function getSubjects(): Promise<SubjectOption[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   const { data, error } = await supabase
     .from("subjects")
     .select("id, name")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("sort_order", { ascending: true });
 
   if (error) throw error;
@@ -39,16 +38,14 @@ export async function getSubjects(): Promise<SubjectOption[]> {
 /** Trae todas las tareas del usuario, ordenadas por prioridad y fecha. */
 export async function getTasks(): Promise<Task[]> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) return [];
 
   // Materias para el join en memoria.
   const { data: subjects } = await supabase
     .from("subjects")
     .select("id, name")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   const subjectMap = new Map<string, string>();
   ((subjects ?? []) as { id: string; name: string }[]).forEach((s) =>
@@ -60,7 +57,7 @@ export async function getTasks(): Promise<Task[]> {
     .select(
       "id, title, category, subject_id, priority, due_date, completed, completed_at, created_at",
     )
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("completed", { ascending: true })
     .order("priority", { ascending: false })
     .order("due_date", { ascending: true, nullsFirst: false });
@@ -83,14 +80,12 @@ export async function createTask(input: {
   due_date?: string | null;
 }): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase.from("tasks").insert(
     {
-      user_id: user.id,
+      user_id: userId,
       title: input.title,
       category: input.category,
       subject_id: input.subject_id ?? null,
@@ -115,10 +110,8 @@ export async function updateTask(
   },
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const update: Record<string, unknown> = {};
   if (input.title !== undefined) update.title = input.title;
@@ -131,7 +124,7 @@ export async function updateTask(
     .from("tasks")
     .update(update as never)
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -142,10 +135,8 @@ export async function toggleTask(
   completed: boolean,
 ): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("tasks")
@@ -154,7 +145,7 @@ export async function toggleTask(
       completed_at: completed ? new Date().toISOString() : null,
     } as never)
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
@@ -162,16 +153,14 @@ export async function toggleTask(
 /** Elimina una tarea. */
 export async function deleteTask(id: string): Promise<void> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No autenticado");
+  const userId = await getCurrentUserId(supabase);
+  if (!userId) throw new Error("No autenticado");
 
   const { error } = await supabase
     .from("tasks")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
