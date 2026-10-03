@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Check,
@@ -64,7 +64,7 @@ export function PlannerEditor({ document }: { document: PlannerDocument }) {
     }
   };
 
-  let editor: React.ReactNode = null;
+  let editor: ReactNode = null;
 
   if (document.template_key === "monthly") {
     editor = (
