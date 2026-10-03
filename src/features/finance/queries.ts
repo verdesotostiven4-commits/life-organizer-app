@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { summarizeFinance, type FinanceSummary } from "@/features/finance/summary";
 import type {
   TransactionType,
   IncomeMainCategory,
@@ -206,34 +207,6 @@ export async function deleteDebt(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
-}
-
-export type FinanceSummary = {
-  totalBalance: number;
-  totalSavings: number;
-  debtsOwed: number;
-  debtsOwedToMe: number;
-};
-
-/** Calcula totales sin volver a consultar la base cuando ya tenemos los datos. */
-export function summarizeFinance(accounts: Account[], debts: Debt[]): FinanceSummary {
-  const totalBalance = accounts
-    .filter((account) => account.kind !== "ahorros")
-    .reduce((sum, account) => sum + account.balance, 0);
-
-  const totalSavings = accounts
-    .filter((account) => account.kind === "ahorros")
-    .reduce((sum, account) => sum + account.balance, 0);
-
-  const debtsOwed = debts
-    .filter((debt) => debt.direction === "debo" && debt.status === "pendiente")
-    .reduce((sum, debt) => sum + debt.amount, 0);
-
-  const debtsOwedToMe = debts
-    .filter((debt) => debt.direction === "me_deben" && debt.status === "pendiente")
-    .reduce((sum, debt) => sum + debt.amount, 0);
-
-  return { totalBalance, totalSavings, debtsOwed, debtsOwedToMe };
 }
 
 /** Calcula totales para pantallas que todavía no tienen cuentas/deudas cargadas. */
