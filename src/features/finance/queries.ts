@@ -39,6 +39,17 @@ export type Transaction = {
   created_at: string;
 };
 
+export type TransactionInput = {
+  type: TransactionType;
+  account_id: string;
+  amount: number;
+  description: string;
+  to_account_id?: string | null;
+  main_category?: IncomeMainCategory | null;
+  sub_category?: string | null;
+  savings_pct?: number;
+};
+
 export type Debt = {
   id: string;
   person: string;
@@ -105,16 +116,7 @@ export async function getRecentTransactions(): Promise<Transaction[]> {
 }
 
 /** Registra una transacción vía RPC atómico (actualiza saldo + calcula ahorro). */
-export async function recordTransaction(input: {
-  type: TransactionType;
-  account_id: string;
-  amount: number;
-  description: string;
-  to_account_id?: string | null;
-  main_category?: IncomeMainCategory | null;
-  sub_category?: string | null;
-  savings_pct?: number;
-}): Promise<string> {
+export async function recordTransaction(input: TransactionInput): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   const householdId = await getCurrentHouseholdId(supabase);
@@ -136,6 +138,64 @@ export async function recordTransaction(input: {
   revalidatePath("/dashboard");
   revalidatePath("/stats");
   return data as string;
+}
+
+/** Edita un movimiento y recalcula los saldos de forma atómica. */
+export async function updateTransaction(
+  id: string,
+  input: TransactionInput,
+): Promise<string> {
+  const supabase = await createClient();
+  const userId = await getCurrentUserId(supabase);
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
+
+  const { data, error } = await supabase.rpc("update_transaction", {
+    p_id: id,
+    p_type: input.type,
+    p_account_id: input.account_id,
+    p_amount: input.amount,
+    p_description: input.description,
+    p_to_account_id: input.to_account_id ?? null,
+    p_main_category: input.main_category ?? null,
+    p_sub_category: input.sub_category ?? null,
+    p_savings_pct: input.savings_pct ?? 0,
+  } as never);
+
+  if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+  return data as string;
+}
+
+/** Elimina un movimiento y revierte su efecto en las cuentas. */
+export async function deleteTransaction(id: string): Promise<void> {
+  const supabase = await createClient();
+  const userId = await getCurrentUserId(supabase);
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
+
+  const { error } = await supabase.rpc("delete_transaction", {
+    p_id: id,
+  } as never);
+
+  if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+}
+
+/** Devuelve cuentas + movimientos después de una mutación financiera. */
+export async function getFinanceState(): Promise<{
+  accounts: Account[];
+  transactions: Transaction[];
+}> {
+  const [accounts, transactions] = await Promise.all([
+    getAccounts(),
+    getRecentTransactions(),
+  ]);
+  return { accounts, transactions };
 }
 
 /** Trae todas las deudas del usuario. */
