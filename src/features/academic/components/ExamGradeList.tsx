@@ -57,13 +57,18 @@ export function ExamGradeList({ initialGrades, subjects }: ExamGradeListProps) {
 
     // 2. Sincronizar con Supabase; rollback si falla.
     try {
-      await createExamGrade({
+      const realId = await createExamGrade({
         subject_id: subjectId,
         exam_name: optimistic.exam_name,
         grade: g,
         max_grade: mx,
         exam_date: date,
       });
+      setGrades((prev) =>
+        prev.map((item) =>
+          item.id === tempId ? { ...item, id: realId } : item,
+        ),
+      );
     } catch (err) {
       console.error("Error al registrar nota:", err);
       setGrades((prev) => prev.filter((item) => item.id !== tempId));
