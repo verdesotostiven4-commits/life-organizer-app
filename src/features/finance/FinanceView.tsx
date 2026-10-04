@@ -57,6 +57,19 @@ export function FinanceView({
   const [summary, setSummary] = useState(initialSummary);
   const [formOpen, setFormOpen] = useState(false);
 
+  const handleDebtsChange = (nextDebts: Debt[]) => {
+    const pending = nextDebts.filter((debt) => debt.status === "pendiente");
+    setSummary((current) => ({
+      ...current,
+      debtsOwed: pending
+        .filter((debt) => debt.direction === "debo")
+        .reduce((sum, debt) => sum + debt.amount, 0),
+      debtsOwedToMe: pending
+        .filter((debt) => debt.direction === "me_deben")
+        .reduce((sum, debt) => sum + debt.amount, 0),
+    }));
+  };
+
   const incomes = useMemo(
     () => transactions.filter((transaction) => transaction.type === "ingreso"),
     [transactions],
@@ -239,7 +252,7 @@ export function FinanceView({
         </Card>
         <Card>
           <CardBody>
-            <DebtList initialDebts={debts} />
+            <DebtList initialDebts={debts} onChange={handleDebtsChange} />
           </CardBody>
         </Card>
       </div>
