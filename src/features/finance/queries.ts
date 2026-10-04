@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { summarizeFinance, type FinanceSummary } from "@/features/finance/summary";
 import type {
   TransactionType,
@@ -53,12 +54,13 @@ export type Debt = {
 export async function getAccounts(): Promise<Account[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("accounts")
     .select("id, name, kind, balance, note, sort_order")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("sort_order", { ascending: true });
 
   if (error) throw error;
@@ -69,13 +71,14 @@ export async function getAccounts(): Promise<Account[]> {
 export async function getRecentTransactions(): Promise<Transaction[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   // Cuentas para el join en memoria.
   const { data: accounts } = await supabase
     .from("accounts")
     .select("id, name")
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   const accountMap = new Map<string, string>();
   ((accounts ?? []) as { id: string; name: string }[]).forEach((a) =>
@@ -87,7 +90,7 @@ export async function getRecentTransactions(): Promise<Transaction[]> {
     .select(
       "id, type, account_id, to_account_id, amount, main_category, sub_category, description, savings_pct, savings_amount, net_amount, created_at",
     )
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -114,7 +117,8 @@ export async function recordTransaction(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase.rpc("record_transaction", {
     p_type: input.type,
@@ -138,14 +142,15 @@ export async function recordTransaction(input: {
 export async function getDebts(): Promise<Debt[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("debts")
     .select(
       "id, person, amount, reason, direction, status, settled_at, created_at",
     )
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("status", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -162,7 +167,8 @@ export async function createDebt(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase
     .from("debts")
@@ -192,7 +198,8 @@ export async function toggleDebtStatus(
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("debts")
@@ -201,7 +208,7 @@ export async function toggleDebtStatus(
       settled_at: status === "pagado" ? new Date().toISOString() : null,
     } as never)
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/finance");
@@ -213,13 +220,14 @@ export async function toggleDebtStatus(
 export async function deleteDebt(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("debts")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/finance");
