@@ -55,12 +55,7 @@ export function NavBar() {
     if (!isActive(href)) router.prefetch(href);
   };
 
-  const closeMoreMenu = () => {
-    moreRef.current?.removeAttribute("open");
-  };
-
   const beginNavigation = (href: string) => {
-    closeMoreMenu();
     warmRoute(href);
     if (!isActive(href)) {
       setPendingHref(href);
@@ -74,7 +69,7 @@ export function NavBar() {
   // Las precalentamos cuando el navegador queda libre para que el primer toque
   // no tenga que empezar desde cero.
   useEffect(() => {
-    closeMoreMenu();
+    moreRef.current?.removeAttribute("open");
 
     const timer = window.setTimeout(() => {
       for (const link of LINKS) {
@@ -207,7 +202,13 @@ export function NavBar() {
               key={link.href}
               href={link.href}
               prefetch={true}
-              {...linkIntentProps(link.href)}
+              onPointerEnter={() => warmRoute(link.href)}
+              onFocus={() => warmRoute(link.href)}
+              onTouchStart={() => warmRoute(link.href)}
+              onClick={() => {
+                moreRef.current?.removeAttribute("open");
+                beginNavigation(link.href);
+              }}
               className={cn(
                 "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition-colors duration-100",
                 active ? "bg-purple-50 text-purple-700" : "text-slate-400 active:bg-slate-50",
@@ -246,7 +247,10 @@ export function NavBar() {
                   onPointerEnter={() => warmRoute(link.href)}
                   onFocus={() => warmRoute(link.href)}
                   onTouchStart={() => warmRoute(link.href)}
-                  onClick={() => beginNavigation(link.href)}
+                  onClick={() => {
+                    moreRef.current?.removeAttribute("open");
+                    beginNavigation(link.href);
+                  }}
                   className={cn(
                     "flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors duration-100",
                     active ? "bg-purple-50 text-purple-700" : "text-slate-600 active:bg-slate-50",
