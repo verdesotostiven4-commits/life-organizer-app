@@ -52,13 +52,14 @@ export const MUSCLE_GROUPS: MuscleGroup[] = [
   "Cuerpo Completo",
 ];
 
-export const PANTRY_CATEGORIES: PantryCategory[] = [
+export const PANTRY_CATEGORIES = [
   "Frutas",
   "Verduras",
   "Proteína",
   "Granos secos",
   "Lácteos",
-];
+  "Limpieza",
+] as const satisfies readonly PantryCategory[];
 
 /** Meta diaria de hidratación (8 vasos × 250ml = 2L). */
 export const WATER_GOAL_CUPS = 8;

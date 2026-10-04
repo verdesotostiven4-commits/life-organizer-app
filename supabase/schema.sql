@@ -139,8 +139,7 @@ create table if not exists public.shopping_items (
   user_id    uuid not null references auth.users(id) on delete cascade,
   budget_id  uuid references public.pantry_budgets(id) on delete cascade,
   name       text not null,
-  category   text not null check (category in
-    ('Frutas','Verduras','Proteína','Granos secos','Lácteos')),
+  category   text not null check (char_length(btrim(category)) between 1 and 40),
   checked    boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -149,8 +148,7 @@ create table if not exists public.pantry_category_expenses (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users(id) on delete cascade,
   budget_id  uuid references public.pantry_budgets(id) on delete cascade,
-  category   text not null check (category in
-    ('Frutas','Verduras','Proteína','Granos secos','Lácteos')),
+  category   text not null check (char_length(btrim(category)) between 1 and 40),
   amount     numeric(10,2) not null default 0,
   updated_at timestamptz not null default now(),
   unique (user_id, budget_id, category)
