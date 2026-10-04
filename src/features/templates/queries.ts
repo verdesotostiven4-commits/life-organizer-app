@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { toISODate } from "@/lib/dates";
 import type { Json } from "@/types/database";
 import { createDefaultContent, templateMeta } from "./catalog";
@@ -35,12 +36,13 @@ function asPlannerDocument(row: {
 export async function getPlannerDocuments(): Promise<PlannerDocument[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("planner_documents")
     .select("id, template_key, title, accent, content, created_at, updated_at")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
@@ -52,13 +54,14 @@ export async function getPlannerDocument(
 ): Promise<PlannerDocument | null> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return null;
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return null;
 
   const { data, error } = await supabase
     .from("planner_documents")
     .select("id, template_key, title, accent, content, created_at, updated_at")
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .maybeSingle();
 
   if (error) throw error;
@@ -71,7 +74,8 @@ export async function createPlannerDocument(
 ): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const meta = templateMeta(templateKey);
   const now = new Date().toISOString();
@@ -80,6 +84,7 @@ export async function createPlannerDocument(
     .from("planner_documents")
     .insert({
       user_id: userId,
+      household_id: householdId,
       template_key: templateKey,
       title: meta.title,
       accent: accent ?? meta.accent,
@@ -101,7 +106,8 @@ export async function savePlannerDocument(input: {
 }): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("planner_documents")
@@ -112,7 +118,7 @@ export async function savePlannerDocument(input: {
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
 }
@@ -120,13 +126,14 @@ export async function savePlannerDocument(input: {
 export async function deletePlannerDocument(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("planner_documents")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
 }

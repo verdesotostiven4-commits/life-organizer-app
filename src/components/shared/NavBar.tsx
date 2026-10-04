@@ -11,6 +11,7 @@ import {
   CreditCard,
   Droplets,
   GraduationCap,
+  Home,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
 const LINKS = [
   { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
@@ -32,6 +34,7 @@ const LINKS = [
   { href: "/finance", label: "Finanzas", icon: CreditCard },
   { href: "/academic", label: "Académico", icon: GraduationCap },
   { href: "/templates", label: "Plantillas", icon: Layers3 },
+  { href: "/household", label: "Hogar", icon: Home },
   { href: "/stats", label: "Resumen", icon: BarChart3 },
 ] as const;
 
@@ -98,6 +101,8 @@ export function NavBar() {
 
   return (
     <>
+      <NotificationCenter />
+
       {navigationPending ? (
         <div className="pointer-events-none fixed inset-x-0 top-0 z-[80] h-0.5 overflow-hidden bg-purple-100">
           <div className="nav-progress-bar h-full rounded-full bg-purple-600" />
@@ -153,10 +158,10 @@ export function NavBar() {
         <div className="mt-3 rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 via-rose-50 to-indigo-50 p-3">
           <div className="mb-2 flex items-center gap-2 text-purple-700">
             <Sparkles className="h-4 w-4" />
-            <span className="text-[10px] font-black uppercase tracking-[0.14em]">Tu espacio</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.14em]">Nuestro hogar</span>
           </div>
           <p className="text-xs leading-relaxed text-slate-600">
-            Organiza clases, tareas, bienestar, compras y dinero sin mezclarlo todo.
+            Un solo espacio para sus tareas, compras, estudios y dinero compartido.
           </p>
           <button
             type="button"

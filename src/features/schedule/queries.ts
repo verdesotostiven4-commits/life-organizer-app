@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 
 export type SessionWithSubject = {
   id: string;
@@ -17,13 +18,14 @@ export type SessionWithSubject = {
 export async function getSchedule(): Promise<SessionWithSubject[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   // Materias del usuario (para unir en memoria, evitamos problemas de tipos del join).
   const { data: subjects, error: subjectsError } = await supabase
     .from("subjects")
     .select("id, name")
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (subjectsError) throw subjectsError;
 
@@ -34,7 +36,7 @@ export async function getSchedule(): Promise<SessionWithSubject[]> {
   const { data: sessions, error: sessionsError } = await supabase
     .from("class_sessions")
     .select("id, subject_id, day_of_week, start_time, end_time, room")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("day_of_week", { ascending: true })
     .order("start_time", { ascending: true });
 

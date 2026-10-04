@@ -5,6 +5,8 @@ import { BudgetOverview } from "./components/BudgetOverview";
 import { ShoppingList } from "./components/ShoppingList";
 import { ExtraExpenses } from "./components/ExtraExpenses";
 import { PantryBudgetControls } from "./components/PantryBudgetControls";
+import { NeighborList } from "./components/NeighborList";
+import type { NeighborListData } from "./neighbor-queries";
 import type {
   PantryBudget,
   ShoppingItem,
@@ -17,6 +19,7 @@ interface PantryViewProps {
   shoppingItems: ShoppingItem[];
   categoryExpenses: CategoryExpense[];
   extraExpenses: ExtraExpense[];
+  neighborList: NeighborListData | null;
 }
 
 export function PantryView({
@@ -24,6 +27,7 @@ export function PantryView({
   shoppingItems,
   categoryExpenses: initialCategoryExpenses,
   extraExpenses: initialExtraExpenses,
+  neighborList,
 }: PantryViewProps) {
   const [budget, setBudget] = useState(initialBudget);
   const [categoryExpenses, setCategoryExpenses] = useState(initialCategoryExpenses);
@@ -47,6 +51,8 @@ export function PantryView({
       />
 
       <ShoppingList initialItems={shoppingItems} />
+
+      <NeighborList initialList={neighborList} />
 
       <ExtraExpenses
         initialExpenses={initialExtraExpenses}

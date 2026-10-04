@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import type { AttendanceStatus } from "@/types/domain";
 
 export type AttendanceRecord = {
@@ -19,12 +20,13 @@ export async function getAttendanceRange(
 ): Promise<AttendanceRecord[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("attendance")
     .select("session_id, session_date, status, note")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .gte("session_date", startDate)
     .lte("session_date", endDate);
 
@@ -42,7 +44,8 @@ export async function saveAttendance(
 ): Promise<AttendanceRecord> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase
     .from("attendance")
@@ -55,7 +58,7 @@ export async function saveAttendance(
         note: note.trim(),
       } as never,
       {
-        onConflict: "user_id, session_id, session_date",
+        onConflict: "household_id, session_id, session_date",
       },
     )
     .select("session_id, session_date, status, note")
@@ -75,12 +78,13 @@ export async function deleteAttendance(
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("attendance")
     .delete()
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .eq("session_id", sessionId)
     .eq("session_date", sessionDate);
 
@@ -103,12 +107,13 @@ export async function getAttendanceSummary(): Promise<
 > {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("attendance_aggregate")
     .select("subject_id, subject_name, attended, missed, cancelled, attendance_pct")
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
 
