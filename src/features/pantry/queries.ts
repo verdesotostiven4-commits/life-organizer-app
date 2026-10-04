@@ -80,6 +80,9 @@ export async function addShoppingItem(input: {
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
+  const category = input.category.trim().slice(0, 40);
+  if (!category) throw new Error("Categoría inválida");
+
   const budget = await getActiveBudget();
 
   const { data, error } = await supabase
@@ -89,7 +92,7 @@ export async function addShoppingItem(input: {
         user_id: userId,
         budget_id: budget?.id ?? null,
         name: input.name,
-        category: input.category,
+        category,
         checked: false,
       } as never,
     )
@@ -164,6 +167,9 @@ export async function updateCategoryExpense(
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
+  const cleanCategory = category.trim().slice(0, 40);
+  if (!cleanCategory) throw new Error("Categoría inválida");
+
   const budget = await getActiveBudget();
   if (!budget) throw new Error("No hay presupuesto activo");
 
@@ -173,7 +179,7 @@ export async function updateCategoryExpense(
     .select("id, amount")
     .eq("user_id", userId)
     .eq("budget_id", budget.id)
-    .eq("category", category)
+    .eq("category", cleanCategory)
     .single();
 
   if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
@@ -193,7 +199,7 @@ export async function updateCategoryExpense(
       {
         user_id: userId,
         budget_id: budget.id,
-        category,
+        category: cleanCategory,
         amount,
         updated_at: new Date().toISOString(),
       } as never,
@@ -307,6 +313,9 @@ export async function setCategoryExpense(
   if (!userId) throw new Error("No autenticado");
   if (amount < 0) throw new Error("Monto inválido");
 
+  const cleanCategory = category.trim().slice(0, 40);
+  if (!cleanCategory) throw new Error("Categoría inválida");
+
   const budget = await getActiveBudget();
   if (!budget) throw new Error("Primero configura tu presupuesto de despensa");
 
@@ -316,7 +325,7 @@ export async function setCategoryExpense(
       {
         user_id: userId,
         budget_id: budget.id,
-        category,
+        category: cleanCategory,
         amount,
         updated_at: new Date().toISOString(),
       } as never,
