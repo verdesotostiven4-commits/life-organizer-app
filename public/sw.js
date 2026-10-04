@@ -5,11 +5,11 @@ const STATIC_ASSETS = [
   "/manifest.json",
   "/icon.svg",
   "/icon-maskable.svg",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/maskable-192.png",
-  "/icons/maskable-512.png",
-  "/icons/apple-touch-icon.png",
+  "/pwa/icon/180",
+  "/pwa/icon/192",
+  "/pwa/icon/512",
+  "/pwa/icon/maskable-192",
+  "/pwa/icon/maskable-512",
 ];
 
 self.addEventListener("install", (event) => {
@@ -78,7 +78,7 @@ self.addEventListener("fetch", (event) => {
 
   const isStaticAsset =
     url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/pwa/icon/") ||
     url.pathname === "/manifest.json" ||
     url.pathname === "/icon.svg" ||
     url.pathname === "/icon-maskable.svg";
