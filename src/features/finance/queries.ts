@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
 import { summarizeFinance, type FinanceSummary } from "@/features/finance/summary";
@@ -127,6 +128,9 @@ export async function recordTransaction(input: {
   } as never);
 
   if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
   return data as string;
 }
 
@@ -155,22 +159,30 @@ export async function createDebt(input: {
   amount: number;
   reason?: string;
   direction: DebtDirection;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
-  const { error } = await supabase.from("debts").insert(
-    {
-      user_id: userId,
-      person: input.person,
-      amount: input.amount,
-      reason: input.reason ?? "",
-      direction: input.direction,
-    } as never,
-  );
+  const { data, error } = await supabase
+    .from("debts")
+    .insert(
+      {
+        user_id: userId,
+        person: input.person,
+        amount: input.amount,
+        reason: input.reason ?? "",
+        direction: input.direction,
+      } as never,
+    )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+  return data.id;
 }
 
 /** Marca una deuda como pagada / pendiente. */
@@ -192,6 +204,9 @@ export async function toggleDebtStatus(
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
 }
 
 /** Elimina una deuda. */
@@ -207,6 +222,9 @@ export async function deleteDebt(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
 }
 
 /** Calcula totales para pantallas que todavía no tienen cuentas/deudas cargadas. */

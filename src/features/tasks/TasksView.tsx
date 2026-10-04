@@ -75,7 +75,14 @@ export function TasksView({ initialTasks, subjects }: TasksViewProps) {
           created_at: new Date().toISOString(),
         };
         setTasks((prev) => [optimistic, ...prev]);
-        try { await createTask(input); } catch (error) {
+        try {
+          const realId = await createTask(input);
+          setTasks((prev) =>
+            prev.map((task) =>
+              task.id === tempId ? { ...task, id: realId } : task,
+            ),
+          );
+        } catch (error) {
           setTasks((prev) => prev.filter((t) => t.id !== tempId));
           throw error;
         }

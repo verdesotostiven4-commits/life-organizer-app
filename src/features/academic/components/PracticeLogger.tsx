@@ -45,11 +45,16 @@ export function PracticeLogger({ initialPractices }: PracticeLoggerProps) {
 
     // 2. Sincronizar con Supabase; rollback si falla.
     try {
-      await createPractice({
+      const realId = await createPractice({
         practice_date: date,
         description: optimistic.description,
         hours: hrs,
       });
+      setPractices((prev) =>
+        prev.map((practice) =>
+          practice.id === tempId ? { ...practice, id: realId } : practice,
+        ),
+      );
     } catch (err) {
       console.error("Error al registrar práctica:", err);
       setPractices((prev) => prev.filter((p) => p.id !== tempId));

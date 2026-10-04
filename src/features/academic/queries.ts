@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
 import { getSubjects } from "@/features/tasks/queries";
@@ -47,21 +48,27 @@ export async function createPractice(input: {
   practice_date: string;
   description: string;
   hours: number;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
-  const { error } = await supabase.from("practice_logs").insert(
-    {
-      user_id: userId,
-      practice_date: input.practice_date,
-      description: input.description,
-      hours: input.hours,
-    } as never,
-  );
+  const { data, error } = await supabase
+    .from("practice_logs")
+    .insert(
+      {
+        user_id: userId,
+        practice_date: input.practice_date,
+        description: input.description,
+        hours: input.hours,
+      } as never,
+    )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/academic");
+  return data.id;
 }
 
 /** Elimina un registro de práctica. */
@@ -77,6 +84,7 @@ export async function deletePractice(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/academic");
 }
 
 /** Trae las notas de exámenes con nombre de materia. */
@@ -113,23 +121,31 @@ export async function createExamGrade(input: {
   grade: number;
   max_grade?: number;
   exam_date: string;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
-  const { error } = await supabase.from("exam_grades").insert(
-    {
-      user_id: userId,
-      subject_id: input.subject_id,
-      exam_name: input.exam_name,
-      grade: input.grade,
-      max_grade: input.max_grade ?? 10,
-      exam_date: input.exam_date,
-    } as never,
-  );
+  const { data, error } = await supabase
+    .from("exam_grades")
+    .insert(
+      {
+        user_id: userId,
+        subject_id: input.subject_id,
+        exam_name: input.exam_name,
+        grade: input.grade,
+        max_grade: input.max_grade ?? 10,
+        exam_date: input.exam_date,
+      } as never,
+    )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/academic");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+  return data.id;
 }
 
 /** Elimina una nota de examen. */
@@ -145,4 +161,7 @@ export async function deleteExamGrade(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/academic");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
 }

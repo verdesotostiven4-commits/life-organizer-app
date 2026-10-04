@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { MuscleGroup } from "@/types/domain";
@@ -91,6 +92,9 @@ export async function updateWaterCups(delta: number): Promise<number> {
   );
 
   if (error) throw error;
+  revalidatePath("/wellness");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   return newCups;
 }
 
@@ -119,22 +123,28 @@ export async function createWorkout(input: {
   minutes: number;
   muscle_group: MuscleGroup;
   note?: string;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
-  const { error } = await supabase.from("workout_logs").insert(
-    {
-      user_id: userId,
-      workout_date: input.workout_date,
-      minutes: input.minutes,
-      muscle_group: input.muscle_group,
-      note: input.note ?? "",
-    } as never,
-  );
+  const { data, error } = await supabase
+    .from("workout_logs")
+    .insert(
+      {
+        user_id: userId,
+        workout_date: input.workout_date,
+        minutes: input.minutes,
+        muscle_group: input.muscle_group,
+        note: input.note ?? "",
+      } as never,
+    )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/wellness");
+  return data.id;
 }
 
 /** Elimina un entrenamiento. */
@@ -150,4 +160,5 @@ export async function deleteWorkout(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/wellness");
 }

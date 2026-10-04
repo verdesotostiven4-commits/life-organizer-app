@@ -49,7 +49,12 @@ export function ShoppingList({ initialItems }: ShoppingListProps) {
     setItems((prev) => [tempItem, ...prev]);
     setName("");
     try {
-      await addShoppingItem({ name: tempItem.name, category });
+      const realId = await addShoppingItem({ name: tempItem.name, category });
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === tempItem.id ? { ...item, id: realId } : item,
+        ),
+      );
     } catch {
       setItems((prev) => prev.filter((i) => i.id !== tempItem.id));
     }
