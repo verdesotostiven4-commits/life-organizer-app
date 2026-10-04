@@ -103,10 +103,16 @@ export function ScheduleView({
 
     const start = currentMonday;
     const end = addDays(currentMonday, 6);
+    let active = true;
     getAttendanceRange(start, end).then((records) => {
+      if (!active) return;
       setAttendance(recordsToStatusMap(records));
       setNotes(recordsToNoteMap(records));
     });
+
+    return () => {
+      active = false;
+    };
   }, [currentMonday]);
 
   const handleSessionClick = (session: SessionWithSubject, date: string) => {
@@ -126,31 +132,52 @@ export function ScheduleView({
     const prevNote = notes.get(key) ?? "";
     const subjectId = modalSession?.subject_id;
 
-    const optimisticAttendance = new Map(attendance);
-    optimisticAttendance.set(key, status);
-    setAttendance(optimisticAttendance);
+    setAttendance((current) => {
+      const next = new Map(current);
+      next.set(key, status);
+      return next;
+    });
 
-    const optimisticNotes = new Map(notes);
-    optimisticNotes.set(key, note.trim());
-    setNotes(optimisticNotes);
+    setNotes((current) => {
+      const next = new Map(current);
+      next.set(key, note.trim());
+      return next;
+    });
 
     setSummary((current) => adjustSummary(current, subjectId, prevStatus, status));
     setModalOpen(false);
 
     try {
-      await saveAttendance(sessionId, date, status, note);
+      const saved = await saveAttendance(sessionId, date, status, note);
+      const savedKey = `${saved.session_id}:${saved.session_date}`;
+
+      setAttendance((current) => {
+        const next = new Map(current);
+        next.set(savedKey, saved.status);
+        return next;
+      });
+
+      setNotes((current) => {
+        const next = new Map(current);
+        next.set(savedKey, saved.note);
+        return next;
+      });
     } catch (error) {
       console.error("Error al guardar asistencia:", error);
 
-      const rollbackAttendance = new Map(attendance);
-      if (prevStatus) rollbackAttendance.set(key, prevStatus);
-      else rollbackAttendance.delete(key);
-      setAttendance(rollbackAttendance);
+      setAttendance((current) => {
+        const next = new Map(current);
+        if (prevStatus) next.set(key, prevStatus);
+        else next.delete(key);
+        return next;
+      });
 
-      const rollbackNotes = new Map(notes);
-      if (prevNote) rollbackNotes.set(key, prevNote);
-      else rollbackNotes.delete(key);
-      setNotes(rollbackNotes);
+      setNotes((current) => {
+        const next = new Map(current);
+        if (prevNote) next.set(key, prevNote);
+        else next.delete(key);
+        return next;
+      });
 
       setSummary((current) => adjustSummary(current, subjectId, status, prevStatus));
     }
@@ -162,13 +189,17 @@ export function ScheduleView({
     const prevNote = notes.get(key) ?? "";
     const subjectId = modalSession?.subject_id;
 
-    const optimisticAttendance = new Map(attendance);
-    optimisticAttendance.delete(key);
-    setAttendance(optimisticAttendance);
+    setAttendance((current) => {
+      const next = new Map(current);
+      next.delete(key);
+      return next;
+    });
 
-    const optimisticNotes = new Map(notes);
-    optimisticNotes.delete(key);
-    setNotes(optimisticNotes);
+    setNotes((current) => {
+      const next = new Map(current);
+      next.delete(key);
+      return next;
+    });
 
     setSummary((current) => adjustSummary(current, subjectId, prevStatus, null));
     setModalOpen(false);
@@ -178,13 +209,17 @@ export function ScheduleView({
     } catch (error) {
       console.error("Error al borrar asistencia:", error);
 
-      const rollbackAttendance = new Map(attendance);
-      if (prevStatus) rollbackAttendance.set(key, prevStatus);
-      setAttendance(rollbackAttendance);
+      setAttendance((current) => {
+        const next = new Map(current);
+        if (prevStatus) next.set(key, prevStatus);
+        return next;
+      });
 
-      const rollbackNotes = new Map(notes);
-      if (prevNote) rollbackNotes.set(key, prevNote);
-      setNotes(rollbackNotes);
+      setNotes((current) => {
+        const next = new Map(current);
+        if (prevNote) next.set(key, prevNote);
+        return next;
+      });
 
       setSummary((current) => adjustSummary(current, subjectId, null, prevStatus));
     }
