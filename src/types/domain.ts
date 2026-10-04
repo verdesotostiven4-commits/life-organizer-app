@@ -10,12 +10,8 @@ export type MuscleGroup =
   | "Abdomen & Core"
   | "Cardio & Caminata"
   | "Cuerpo Completo";
-export type PantryCategory =
-  | "Frutas"
-  | "Verduras"
-  | "Proteína"
-  | "Granos secos"
-  | "Lácteos";
+/** Categoría de despensa. Puede ser una categoría base o una personalizada por el usuario. */
+export type PantryCategory = string;
 export type AccountKind = "banco" | "efectivo" | "ahorros";
 export type TransactionType = "ingreso" | "gasto" | "retiro";
 export type IncomeMainCategory =
