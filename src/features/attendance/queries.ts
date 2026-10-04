@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { AttendanceStatus } from "@/types/domain";
@@ -38,25 +39,33 @@ export async function saveAttendance(
   sessionDate: string,
   status: AttendanceStatus,
   note = "",
-): Promise<void> {
+): Promise<AttendanceRecord> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
-  const { error } = await supabase.from("attendance").upsert(
-    {
-      user_id: userId,
-      session_id: sessionId,
-      session_date: sessionDate,
-      status,
-      note: note.trim(),
-    } as never,
-    {
-      onConflict: "user_id, session_id, session_date",
-    },
-  );
+  const { data, error } = await supabase
+    .from("attendance")
+    .upsert(
+      {
+        user_id: userId,
+        session_id: sessionId,
+        session_date: sessionDate,
+        status,
+        note: note.trim(),
+      } as never,
+      {
+        onConflict: "user_id, session_id, session_date",
+      },
+    )
+    .select("session_id, session_date, status, note")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+  return data as AttendanceRecord;
 }
 
 /** Elimina un registro de asistencia. */
@@ -76,6 +85,9 @@ export async function deleteAttendance(
     .eq("session_date", sessionDate);
 
   if (error) throw error;
+  revalidatePath("/schedule");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
 }
 
 /** Trae el resumen de asistencia por materia (vista attendance_aggregate). */
