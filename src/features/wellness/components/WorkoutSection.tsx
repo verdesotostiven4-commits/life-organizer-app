@@ -47,12 +47,17 @@ export function WorkoutSection({ initialWorkouts }: WorkoutSectionProps) {
 
     // 2. Sincronizar con Supabase; rollback si falla.
     try {
-      await createWorkout({
+      const realId = await createWorkout({
         workout_date: date,
         minutes: mins,
         muscle_group: group,
         note: optimistic.note,
       });
+      setWorkouts((prev) =>
+        prev.map((workout) =>
+          workout.id === tempId ? { ...workout, id: realId } : workout,
+        ),
+      );
     } catch (err) {
       console.error("Error al registrar entrenamiento:", err);
       setWorkouts((prev) => prev.filter((w) => w.id !== tempId));
