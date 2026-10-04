@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { PantryCategory } from "@/types/domain";
@@ -74,24 +75,30 @@ export async function getShoppingItems(): Promise<ShoppingItem[]> {
 export async function addShoppingItem(input: {
   name: string;
   category: PantryCategory;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
   const budget = await getActiveBudget();
 
-  const { error } = await supabase.from("shopping_items").insert(
-    {
-      user_id: userId,
-      budget_id: budget?.id ?? null,
-      name: input.name,
-      category: input.category,
-      checked: false,
-    } as never,
-  );
+  const { data, error } = await supabase
+    .from("shopping_items")
+    .insert(
+      {
+        user_id: userId,
+        budget_id: budget?.id ?? null,
+        name: input.name,
+        category: input.category,
+        checked: false,
+      } as never,
+    )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/pantry");
+  return data.id;
 }
 
 /** Marca/desmarca un item como comprado. */
@@ -215,24 +222,30 @@ export async function addExtraExpense(input: {
   name: string;
   cost: number;
   expense_date?: string;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
   const budget = await getActiveBudget();
 
-  const { error } = await supabase.from("extra_expenses").insert(
-    {
-      user_id: userId,
-      budget_id: budget?.id ?? null,
-      name: input.name,
-      cost: input.cost,
-      expense_date: input.expense_date ?? toISODate(),
-    } as never,
-  );
+  const { data, error } = await supabase
+    .from("extra_expenses")
+    .insert(
+      {
+        user_id: userId,
+        budget_id: budget?.id ?? null,
+        name: input.name,
+        cost: input.cost,
+        expense_date: input.expense_date ?? toISODate(),
+      } as never,
+    )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/pantry");
+  return data.id;
 }
 
 /** Elimina un gasto extra. */
@@ -248,6 +261,7 @@ export async function deleteExtraExpense(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/pantry");
 }
 
 
@@ -277,6 +291,7 @@ export async function savePantryBudget(input: {
     .single();
 
   if (error) throw error;
+  revalidatePath("/pantry");
   return data as PantryBudget;
 }
 
@@ -309,5 +324,6 @@ export async function setCategoryExpense(
     .single();
 
   if (error) throw error;
+  revalidatePath("/pantry");
   return data as CategoryExpense;
 }
