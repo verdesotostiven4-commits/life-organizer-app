@@ -12,6 +12,7 @@ import {
   Layers3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getTasks } from "@/features/tasks/queries";
 import { getFinanceSummary } from "@/features/finance/queries";
 import { getTodayWater } from "@/features/wellness/queries";
@@ -38,11 +39,13 @@ export default async function DashboardPage() {
   const userId = auth?.claims?.sub;
   if (!userId) redirect("/login");
   const email = typeof auth.claims.email === "string" ? auth.claims.email : null;
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!householdId) redirect("/household");
 
   const { count } = await supabase
     .from("subjects")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (count === 0) await supabase.rpc("seed_initial_data");
 
@@ -69,7 +72,7 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">
       <PageHeader
-        eyebrow="Panel personal"
+        eyebrow="Nuestro hogar"
         title={`Hola, ${name}`}
         description={formatLong(today)}
         tone="purple"
