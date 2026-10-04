@@ -55,7 +55,12 @@ export function NavBar() {
     if (!isActive(href)) router.prefetch(href);
   };
 
+  const closeMoreMenu = () => {
+    moreRef.current?.removeAttribute("open");
+  };
+
   const beginNavigation = (href: string) => {
+    closeMoreMenu();
     warmRoute(href);
     if (!isActive(href)) {
       setPendingHref(href);
@@ -69,6 +74,8 @@ export function NavBar() {
   // Las precalentamos cuando el navegador queda libre para que el primer toque
   // no tenga que empezar desde cero.
   useEffect(() => {
+    closeMoreMenu();
+
     const timer = window.setTimeout(() => {
       for (const link of LINKS) {
         if (!isActive(link.href)) router.prefetch(link.href);
@@ -239,10 +246,7 @@ export function NavBar() {
                   onPointerEnter={() => warmRoute(link.href)}
                   onFocus={() => warmRoute(link.href)}
                   onTouchStart={() => warmRoute(link.href)}
-                  onClick={() => {
-                    beginNavigation(link.href);
-                    moreRef.current?.removeAttribute("open");
-                  }}
+                  onClick={() => beginNavigation(link.href)}
                   className={cn(
                     "flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition-colors duration-100",
                     active ? "bg-purple-50 text-purple-700" : "text-slate-600 active:bg-slate-50",
