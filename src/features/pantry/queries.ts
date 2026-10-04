@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import type { PantryCategory } from "@/types/domain";
 import { toISODate } from "@/lib/dates";
 
@@ -41,12 +42,13 @@ export type ExtraExpense = {
 export async function getActiveBudget(): Promise<PantryBudget | null> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return null;
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return null;
 
   const { data, error } = await supabase
     .from("pantry_budgets")
     .select("id, weeks, budget, is_active, created_at")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .eq("is_active", true)
     .single();
 
@@ -58,12 +60,13 @@ export async function getActiveBudget(): Promise<PantryBudget | null> {
 export async function getShoppingItems(): Promise<ShoppingItem[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("shopping_items")
     .select("id, name, category, checked, created_at")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("checked", { ascending: true })
     .order("created_at", { ascending: false });
 
@@ -78,7 +81,8 @@ export async function addShoppingItem(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const category = input.category.trim().slice(0, 40);
   if (!category) throw new Error("Categoría inválida");
@@ -111,13 +115,14 @@ export async function toggleShoppingItem(
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("shopping_items")
     .update({ checked } as never)
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/pantry");
@@ -127,13 +132,14 @@ export async function toggleShoppingItem(
 export async function deleteShoppingItem(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("shopping_items")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/pantry");
@@ -143,7 +149,8 @@ export async function deleteShoppingItem(id: string): Promise<void> {
 export async function getCategoryExpenses(): Promise<CategoryExpense[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const budget = await getActiveBudget();
   if (!budget) return [];
@@ -151,7 +158,7 @@ export async function getCategoryExpenses(): Promise<CategoryExpense[]> {
   const { data, error } = await supabase
     .from("pantry_category_expenses")
     .select("id, category, amount, updated_at")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .eq("budget_id", budget.id);
 
   if (error) throw error;
@@ -165,7 +172,8 @@ export async function updateCategoryExpense(
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const cleanCategory = category.trim().slice(0, 40);
   if (!cleanCategory) throw new Error("Categoría inválida");
@@ -177,7 +185,7 @@ export async function updateCategoryExpense(
   const { data: existing, error: fetchError } = await supabase
     .from("pantry_category_expenses")
     .select("id, amount")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .eq("budget_id", budget.id)
     .eq("category", cleanCategory)
     .single();
@@ -212,12 +220,13 @@ export async function updateCategoryExpense(
 export async function getExtraExpenses(): Promise<ExtraExpense[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("extra_expenses")
     .select("id, name, cost, expense_date, created_at")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("expense_date", { ascending: false })
     .limit(30);
 
@@ -233,7 +242,8 @@ export async function addExtraExpense(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const budget = await getActiveBudget();
 
@@ -260,13 +270,14 @@ export async function addExtraExpense(input: {
 export async function deleteExtraExpense(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("extra_expenses")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/pantry");
@@ -280,7 +291,8 @@ export async function savePantryBudget(input: {
 }): Promise<PantryBudget> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
   if (input.budget < 0) throw new Error("Presupuesto inválido");
   if (input.weeks < 1 || input.weeks > 4) throw new Error("Semanas inválidas");
 
@@ -293,7 +305,7 @@ export async function savePantryBudget(input: {
         weeks: input.weeks,
         is_active: true,
       } as never,
-      { onConflict: "user_id" },
+      { onConflict: "household_id" },
     )
     .select("id, weeks, budget, is_active, created_at")
     .single();
@@ -310,7 +322,8 @@ export async function setCategoryExpense(
 ): Promise<CategoryExpense> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
   if (amount < 0) throw new Error("Monto inválido");
 
   const cleanCategory = category.trim().slice(0, 40);
@@ -329,7 +342,7 @@ export async function setCategoryExpense(
         amount,
         updated_at: new Date().toISOString(),
       } as never,
-      { onConflict: "user_id,budget_id,category" },
+      { onConflict: "household_id,budget_id,category" },
     )
     .select("id, category, amount, updated_at")
     .single();
