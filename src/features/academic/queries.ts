@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getSubjects } from "@/features/tasks/queries";
 
 export type PracticeLog = {
@@ -30,12 +31,13 @@ export type { SubjectOption } from "@/features/tasks/queries";
 export async function getRecentPractices(): Promise<PracticeLog[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("practice_logs")
     .select("id, practice_date, description, hours, created_at")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("practice_date", { ascending: false })
     .limit(30);
 
@@ -51,7 +53,8 @@ export async function createPractice(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase
     .from("practice_logs")
@@ -75,13 +78,14 @@ export async function createPractice(input: {
 export async function deletePractice(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("practice_logs")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/academic");
@@ -91,7 +95,8 @@ export async function deletePractice(id: string): Promise<void> {
 export async function getExamGrades(): Promise<ExamGrade[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const subjects = await getSubjects();
   const subjectMap = new Map<string, string>();
@@ -102,7 +107,7 @@ export async function getExamGrades(): Promise<ExamGrade[]> {
     .select(
       "id, subject_id, exam_name, grade, max_grade, exam_date, created_at",
     )
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("exam_date", { ascending: false });
 
   if (error) throw error;
@@ -124,7 +129,8 @@ export async function createExamGrade(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase
     .from("exam_grades")
@@ -152,13 +158,14 @@ export async function createExamGrade(input: {
 export async function deleteExamGrade(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("exam_grades")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/academic");
