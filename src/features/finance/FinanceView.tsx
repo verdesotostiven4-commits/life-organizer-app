@@ -133,6 +133,10 @@ export function FinanceView({
     const netAmount =
       input.type === "ingreso" ? input.amount - savingsAmount : input.amount;
 
+    const savingsAccountId = accounts.find(
+      (item) => item.kind === "ahorros",
+    )?.id;
+
     const tempId = `temp-${Date.now()}`;
     const optimisticTx: Transaction = {
       id: tempId,
@@ -156,7 +160,7 @@ export function FinanceView({
 
       if (input.type === "ingreso") {
         if (item.id === input.account_id) balance += netAmount;
-        if (item.kind === "ahorros" && savingsAmount > 0) {
+        if (item.id === savingsAccountId && savingsAmount > 0) {
           balance += savingsAmount;
         }
       } else if (
