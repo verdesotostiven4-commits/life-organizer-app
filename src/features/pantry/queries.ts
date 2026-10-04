@@ -117,6 +117,7 @@ export async function toggleShoppingItem(
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/pantry");
 }
 
 /** Elimina un item de la lista de compras. */
@@ -132,6 +133,7 @@ export async function deleteShoppingItem(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/pantry");
 }
 
 /** Trae los gastos por categoría del presupuesto activo. */
