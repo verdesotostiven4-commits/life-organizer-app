@@ -17,6 +17,7 @@ import type { DebtDirection } from "@/types/domain";
 
 interface DebtListProps {
   initialDebts: Debt[];
+  onChange?: (debts: Debt[]) => void;
 }
 
 const DIRECTION_OPTIONS = [
@@ -24,8 +25,16 @@ const DIRECTION_OPTIONS = [
   { value: "me_deben", label: "Me deben" },
 ];
 
-export function DebtList({ initialDebts }: DebtListProps) {
+export function DebtList({ initialDebts, onChange }: DebtListProps) {
   const [debts, setDebts] = useState(initialDebts);
+
+  const updateDebts = (updater: (current: Debt[]) => Debt[]) => {
+    setDebts((current) => {
+      const next = updater(current);
+      onChange?.(next);
+      return next;
+    });
+  };
   const [open, setOpen] = useState(false);
   const [person, setPerson] = useState("");
   const [amount, setAmount] = useState("");
@@ -52,7 +61,7 @@ export function DebtList({ initialDebts }: DebtListProps) {
       settled_at: null,
       created_at: new Date().toISOString(),
     };
-    setDebts((prev) => [optimisticDebt, ...prev]);
+    updateDebts((prev) => [optimisticDebt, ...prev]);
     setOpen(false);
     setPerson("");
     setAmount("");
@@ -61,15 +70,20 @@ export function DebtList({ initialDebts }: DebtListProps) {
     // 2. Sincronizar con Supabase; rollback si falla.
     setLoading(true);
     try {
-      await createDebt({
+      const realId = await createDebt({
         person: optimisticDebt.person,
         amount: num,
         reason: optimisticDebt.reason,
         direction,
       });
+      updateDebts((prev) =>
+        prev.map((debt) =>
+          debt.id === tempId ? { ...debt, id: realId } : debt,
+        ),
+      );
     } catch (err) {
       console.error("Error al crear deuda:", err);
-      setDebts((prev) => prev.filter((d) => d.id !== tempId));
+      updateDebts((prev) => prev.filter((d) => d.id !== tempId));
     } finally {
       setLoading(false);
     }
@@ -78,7 +92,7 @@ export function DebtList({ initialDebts }: DebtListProps) {
   const handleToggle = async (id: string, current: "pendiente" | "pagado") => {
     const newStatus = current === "pendiente" ? "pagado" : "pendiente";
     const prevDebt = debts.find((d) => d.id === id);
-    setDebts((prev) =>
+    updateDebts((prev) =>
       prev.map((d) =>
         d.id === id
           ? {
@@ -94,7 +108,7 @@ export function DebtList({ initialDebts }: DebtListProps) {
       await toggleDebtStatus(id, newStatus);
     } catch {
       if (prevDebt) {
-        setDebts((prev) =>
+        updateDebts((prev) =>
           prev.map((d) => (d.id === id ? prevDebt : d)),
         );
       }
@@ -103,11 +117,11 @@ export function DebtList({ initialDebts }: DebtListProps) {
 
   const handleDelete = async (id: string) => {
     const backup = debts.find((d) => d.id === id);
-    setDebts((prev) => prev.filter((d) => d.id !== id));
+    updateDebts((prev) => prev.filter((d) => d.id !== id));
     try {
       await deleteDebt(id);
     } catch {
-      if (backup) setDebts((prev) => [backup, ...prev]);
+      if (backup) updateDebts((prev) => [backup, ...prev]);
     }
   };
 
