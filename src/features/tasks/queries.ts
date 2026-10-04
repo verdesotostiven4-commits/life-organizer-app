@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import type { Priority, TaskCategory } from "@/types/domain";
 
 export type Task = {
@@ -24,12 +25,13 @@ export type SubjectOption = { id: string; name: string };
 export async function getSubjects(): Promise<SubjectOption[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   const { data, error } = await supabase
     .from("subjects")
     .select("id, name")
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("sort_order", { ascending: true });
 
   if (error) throw error;
@@ -40,13 +42,14 @@ export async function getSubjects(): Promise<SubjectOption[]> {
 export async function getTasks(): Promise<Task[]> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return [];
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return [];
 
   // Materias para el join en memoria.
   const { data: subjects } = await supabase
     .from("subjects")
     .select("id, name")
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   const subjectMap = new Map<string, string>();
   ((subjects ?? []) as { id: string; name: string }[]).forEach((s) =>
@@ -58,7 +61,7 @@ export async function getTasks(): Promise<Task[]> {
     .select(
       "id, title, category, subject_id, priority, due_date, completed, completed_at, created_at",
     )
-    .eq("user_id", userId)
+    .eq("household_id", householdId)
     .order("completed", { ascending: true })
     .order("priority", { ascending: false })
     .order("due_date", { ascending: true, nullsFirst: false });
@@ -82,7 +85,8 @@ export async function createTask(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase.from("tasks").insert(
     {
@@ -119,7 +123,8 @@ export async function updateTask(
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const update: Record<string, unknown> = {};
   if (input.title !== undefined) update.title = input.title;
@@ -132,7 +137,7 @@ export async function updateTask(
     .from("tasks")
     .update(update as never)
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/tasks");
@@ -148,7 +153,8 @@ export async function toggleTask(
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("tasks")
@@ -157,7 +163,7 @@ export async function toggleTask(
       completed_at: completed ? new Date().toISOString() : null,
     } as never)
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/tasks");
@@ -170,13 +176,14 @@ export async function toggleTask(
 export async function deleteTask(id: string): Promise<void> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { error } = await supabase
     .from("tasks")
     .delete()
     .eq("id", id)
-    .eq("user_id", userId);
+    .eq("household_id", householdId);
 
   if (error) throw error;
   revalidatePath("/tasks");
