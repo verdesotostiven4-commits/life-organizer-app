@@ -1,26 +1,101 @@
 {
-  "name": "Harmony OS — Planificador ESPOCH",
-  "short_name": "Harmony OS",
-  "description": "Tu vida universitaria y personal, organizada con calma. Horario ESPOCH, finanzas, tareas y bienestar en un solo lugar.",
+  "id": "/",
+  "name": "Harmony OS",
+  "short_name": "Harmony",
+  "description": "Vida, estudio, compras y finanzas compartidas en un solo lugar.",
   "start_url": "/dashboard",
   "scope": "/",
+  "lang": "es-EC",
+  "dir": "ltr",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#faf9f6",
+  "orientation": "any",
+  "background_color": "#f7f8fb",
   "theme_color": "#7c3aed",
-  "categories": ["education", "productivity", "lifestyle"],
+  "categories": [
+    "education",
+    "productivity",
+    "lifestyle",
+    "finance"
+  ],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/pwa/icon/192",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/pwa/icon/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/icon/maskable-192",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/pwa/icon/maskable-512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tareas",
+      "short_name": "Tareas",
+      "description": "Abrir tareas y pendientes",
+      "url": "/tasks",
+      "icons": [
+        {
+          "src": "/pwa/icon/192",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Horario",
+      "short_name": "Horario",
+      "description": "Abrir horario y asistencia",
+      "url": "/schedule",
+      "icons": [
+        {
+          "src": "/pwa/icon/192",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Despensa",
+      "short_name": "Despensa",
+      "description": "Abrir compras y despensa",
+      "url": "/pantry",
+      "icons": [
+        {
+          "src": "/pwa/icon/192",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Finanzas",
+      "short_name": "Finanzas",
+      "description": "Abrir cuentas y movimientos",
+      "url": "/finance",
+      "icons": [
+        {
+          "src": "/pwa/icon/192",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

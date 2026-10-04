@@ -114,3 +114,16 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .nav-progress-bar { animation: none; width: 100%; opacity: 0.55; }
 }
+
+
+/* PWA standalone: reduce browser-like overscroll while preserving page scroll. */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+}
