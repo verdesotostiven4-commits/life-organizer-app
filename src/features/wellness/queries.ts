@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import type { MuscleGroup } from "@/types/domain";
 import { toISODate } from "@/lib/dates";
 
@@ -64,7 +65,8 @@ export async function getWeekWater(): Promise<WaterLog[]> {
 export async function updateWaterCups(delta: number): Promise<number> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const today = toISODate();
 
@@ -84,6 +86,7 @@ export async function updateWaterCups(delta: number): Promise<number> {
   const { error } = await supabase.from("water_logs").upsert(
     {
       user_id: userId,
+      household_id: householdId,
       log_date: today,
       cups: newCups,
       updated_at: new Date().toISOString(),
@@ -126,13 +129,15 @@ export async function createWorkout(input: {
 }): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) throw new Error("No autenticado");
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
 
   const { data, error } = await supabase
     .from("workout_logs")
     .insert(
       {
         user_id: userId,
+        household_id: householdId,
         workout_date: input.workout_date,
         minutes: input.minutes,
         muscle_group: input.muscle_group,
