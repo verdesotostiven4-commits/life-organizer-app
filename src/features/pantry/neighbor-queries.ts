@@ -104,14 +104,18 @@ export async function setNeighborItemStatus(
   status: NeighborItemStatus,
 ): Promise<void> {
   const supabase = await createClient();
+  const userId = await getCurrentUserId(supabase);
   const householdId = await getCurrentHouseholdId(supabase);
-  if (!householdId) throw new Error("No perteneces a un hogar");
+  if (!userId || !householdId) throw new Error("No perteneces a un hogar");
 
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("household_purchase_items")
     .update({
       status,
-      updated_at: new Date().toISOString(),
+      purchased_by: status === "pendiente" ? null : userId,
+      purchased_at: status === "pendiente" ? null : now,
+      updated_at: now,
     })
     .eq("id", id)
     .eq("household_id", householdId);

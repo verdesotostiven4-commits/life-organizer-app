@@ -235,6 +235,7 @@ export async function createDebt(input: {
     .insert(
       {
         user_id: userId,
+        household_id: householdId,
         person: input.person,
         amount: input.amount,
         reason: input.reason ?? "",

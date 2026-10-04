@@ -91,6 +91,7 @@ export async function createTask(input: {
   const { data, error } = await supabase.from("tasks").insert(
     {
       user_id: userId,
+      household_id: householdId,
       title: input.title,
       category: input.category,
       subject_id: input.subject_id ?? null,

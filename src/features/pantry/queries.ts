@@ -94,6 +94,7 @@ export async function addShoppingItem(input: {
     .insert(
       {
         user_id: userId,
+        household_id: householdId,
         budget_id: budget?.id ?? null,
         name: input.name,
         category,
@@ -206,6 +207,7 @@ export async function updateCategoryExpense(
     const { error } = await supabase.from("pantry_category_expenses").insert(
       {
         user_id: userId,
+        household_id: householdId,
         budget_id: budget.id,
         category: cleanCategory,
         amount,
@@ -252,6 +254,7 @@ export async function addExtraExpense(input: {
     .insert(
       {
         user_id: userId,
+        household_id: householdId,
         budget_id: budget?.id ?? null,
         name: input.name,
         cost: input.cost,
@@ -301,6 +304,7 @@ export async function savePantryBudget(input: {
     .upsert(
       {
         user_id: userId,
+        household_id: householdId,
         budget: input.budget,
         weeks: input.weeks,
         is_active: true,
@@ -337,6 +341,7 @@ export async function setCategoryExpense(
     .upsert(
       {
         user_id: userId,
+        household_id: householdId,
         budget_id: budget.id,
         category: cleanCategory,
         amount,

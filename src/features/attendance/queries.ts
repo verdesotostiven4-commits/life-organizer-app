@@ -52,6 +52,7 @@ export async function saveAttendance(
     .upsert(
       {
         user_id: userId,
+        household_id: householdId,
         session_id: sessionId,
         session_date: sessionDate,
         status,

@@ -61,6 +61,7 @@ export async function createPractice(input: {
     .insert(
       {
         user_id: userId,
+        household_id: householdId,
         practice_date: input.practice_date,
         description: input.description,
         hours: input.hours,
@@ -137,6 +138,7 @@ export async function createExamGrade(input: {
     .insert(
       {
         user_id: userId,
+        household_id: householdId,
         subject_id: input.subject_id,
         exam_name: input.exam_name,
         grade: input.grade,
