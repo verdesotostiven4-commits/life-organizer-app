@@ -14,7 +14,11 @@ const STATIC_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)),
+    caches.open(STATIC_CACHE).then(async (cache) => {
+      await Promise.allSettled(
+        STATIC_ASSETS.map((asset) => cache.add(asset)),
+      );
+    }),
   );
 });
 
@@ -47,16 +51,28 @@ async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_CACHE);
   const cached = await cache.match(request);
 
-  const network = fetch(request)
+  const networkPromise = fetch(request)
     .then((response) => {
       if (response.ok) {
-        cache.put(request, response.clone());
+        cache.put(request, response.clone()).catch(() => undefined);
       }
       return response;
     })
-    .catch(() => cached);
+    .catch(() => null);
 
-  return cached ?? network;
+  if (cached) {
+    networkPromise.catch(() => undefined);
+    return cached;
+  }
+
+  const network = await networkPromise;
+  return (
+    network ??
+    new Response("Sin conexión", {
+      status: 503,
+      statusText: "Offline",
+    })
+  );
 }
 
 self.addEventListener("fetch", (event) => {
@@ -67,11 +83,20 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Las páginas autenticadas nunca se guardan en Cache Storage. Si no hay
-  // conexión mostramos una pantalla offline neutra, sin datos personales.
+  // No guardamos HTML, RSC ni respuestas autenticadas. La PWA solo conserva
+  // recursos públicos de la interfaz y una pantalla offline neutra.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html")),
+      fetch(request).catch(async () => {
+        const fallback = await caches.match("/offline.html");
+        return (
+          fallback ??
+          new Response("Harmony OS está sin conexión.", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          })
+        );
+      }),
     );
     return;
   }
