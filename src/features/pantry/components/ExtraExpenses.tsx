@@ -48,7 +48,12 @@ export function ExtraExpenses({ initialExpenses, onChange }: ExtraExpensesProps)
     setCost("");
 
     try {
-      await addExtraExpense({ name: optimistic.name, cost: num });
+      const realId = await addExtraExpense({ name: optimistic.name, cost: num });
+      updateExpenses((current) =>
+        current.map((expense) =>
+          expense.id === tempId ? { ...expense, id: realId } : expense,
+        ),
+      );
     } catch (err) {
       console.error("Error al registrar gasto extra:", err);
       updateExpenses((current) => current.filter((expense) => expense.id !== tempId));
