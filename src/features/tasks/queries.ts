@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
 import type { Priority, TaskCategory } from "@/types/domain";
@@ -78,12 +79,12 @@ export async function createTask(input: {
   subject_id?: string | null;
   priority: Priority;
   due_date?: string | null;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
   if (!userId) throw new Error("No autenticado");
 
-  const { error } = await supabase.from("tasks").insert(
+  const { data, error } = await supabase.from("tasks").insert(
     {
       user_id: userId,
       title: input.title,
@@ -93,9 +94,16 @@ export async function createTask(input: {
       due_date: input.due_date ?? null,
       completed: false,
     } as never,
-  );
+  )
+    .select("id")
+    .single();
 
   if (error) throw error;
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath("/stats");
+  return data.id;
 }
 
 /** Actualiza una tarea existente. */
@@ -127,6 +135,10 @@ export async function updateTask(
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath("/stats");
 }
 
 /** Marca/desmarca una tarea como completada. */
@@ -148,6 +160,10 @@ export async function toggleTask(
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath("/stats");
 }
 
 /** Elimina una tarea. */
@@ -163,4 +179,8 @@ export async function deleteTask(id: string): Promise<void> {
     .eq("user_id", userId);
 
   if (error) throw error;
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath("/stats");
 }
