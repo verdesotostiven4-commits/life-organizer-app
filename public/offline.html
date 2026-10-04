@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#7c3aed" />
+  <title>Harmony OS · Sin conexión</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(167,139,250,.22), transparent 34%),
+        radial-gradient(circle at 85% 90%, rgba(56,189,248,.14), transparent 34%),
+        #f7f8fb;
+      color: #1e293b;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(100%, 420px);
+      border: 1px solid #ede9fe;
+      border-radius: 28px;
+      background: rgba(255,255,255,.94);
+      padding: 28px;
+      text-align: center;
+      box-shadow: 0 22px 60px rgba(76,29,149,.10);
+    }
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 30px;
+      background: linear-gradient(135deg,#a78bfa,#7c3aed);
+      box-shadow: 0 12px 26px rgba(124,58,237,.22);
+    }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #7c3aed;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: 27px; line-height: 1.1; }
+    p { margin: 12px 0 20px; color: #64748b; font-size: 14px; line-height: 1.55; }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 16px;
+      background: #7c3aed;
+      color: white;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo">H</div>
+    <p class="eyebrow">Harmony OS</p>
+    <h1>Estás sin conexión</h1>
+    <p>
+      Tus datos no se exponen ni se guardan en caché. Cuando vuelva el internet,
+      Harmony se conectará otra vez con Supabase.
+    </p>
+    <button type="button" onclick="location.reload()">Intentar de nuevo</button>
+  </main>
+</body>
+</html>
