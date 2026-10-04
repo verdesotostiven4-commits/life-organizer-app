@@ -3,21 +3,34 @@ import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppChrome } from "@/components/layout/AppChrome";
+import { PWAController } from "@/components/pwa/PWAController";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Harmony OS — Planificador ESPOCH",
+  title: {
+    default: "Harmony OS",
+    template: "%s · Harmony OS",
+  },
   description:
-    "Tu vida universitaria y personal, organizada con calma. Horario ESPOCH, finanzas, tareas y bienestar en un solo lugar.",
+    "Vida, estudio, compras y finanzas compartidas en un solo lugar.",
   manifest: "/manifest.json",
   applicationName: "Harmony OS",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Harmony OS" },
   formatDetection: { telephone: false },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg" }],
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
   },
 };
 
@@ -35,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={<div className="min-h-dvh">{children}</div>}>
           <AppChrome>{children}</AppChrome>
         </Suspense>
+        <PWAController />
       </body>
     </html>
   );
