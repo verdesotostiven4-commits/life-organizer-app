@@ -1038,6 +1038,56 @@ export type Database = {
         }
         Relationships: []
       }
+      reminders: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          household_id: string
+          href: string
+          id: string
+          note: string
+          remind_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          household_id: string
+          href?: string
+          id?: string
+          note?: string
+          remind_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          household_id?: string
+          href?: string
+          id?: string
+          note?: string
+          remind_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shopping_items: {
         Row: {
           budget_id: string | null
@@ -1343,12 +1393,19 @@ export type Database = {
           attendance_pct: number | null
           attended: number | null
           cancelled: number | null
+          household_id: string | null
           missed: number | null
           subject_id: string | null
           subject_name: string | null
-          user_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "class_sessions_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "class_sessions_subject_id_fkey"
             columns: ["subject_id"]
