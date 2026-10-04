@@ -84,6 +84,7 @@ export async function createPlannerDocument(
     .from("planner_documents")
     .insert({
       user_id: userId,
+      household_id: householdId,
       template_key: templateKey,
       title: meta.title,
       accent: accent ?? meta.accent,
