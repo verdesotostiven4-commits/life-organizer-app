@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   Download,
   RefreshCw,
@@ -35,16 +35,23 @@ export function PWAController() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [showInstall, setShowInstall] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
-  const [online, setOnline] = useState(true);
+
+  const online = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener("online", onStoreChange);
+      window.addEventListener("offline", onStoreChange);
+      return () => {
+        window.removeEventListener("online", onStoreChange);
+        window.removeEventListener("offline", onStoreChange);
+      };
+    },
+    () => navigator.onLine,
+    () => true,
+  );
   const refreshingRef = useRef(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
-    setOnline(navigator.onLine);
-
-    const handleOnline = () => setOnline(true);
-    const handleOffline = () => setOnline(false);
-
     const handleInstallPrompt = (event: Event) => {
       event.preventDefault();
 
@@ -67,14 +74,10 @@ export function PWAController() {
       window.localStorage.removeItem(INSTALL_DISMISS_KEY);
     };
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
       window.removeEventListener("beforeinstallprompt", handleInstallPrompt);
       window.removeEventListener("appinstalled", handleInstalled);
     };
