@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/supabase/auth";
+import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getSchedule, type SessionWithSubject } from "@/features/schedule/queries";
 import { getAttendanceRange, type AttendanceRecord } from "@/features/attendance/queries";
 
@@ -38,7 +39,8 @@ export async function getCalendarMonth(
 ): Promise<CalendarMonthData> {
   const supabase = await createClient();
   const userId = await getCurrentUserId(supabase);
-  if (!userId) return { tasks: [], water: [], classes: [], attendance: [] };
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) return { tasks: [], water: [], classes: [], attendance: [] };
 
   const { start, end } = monthBounds(year, month0);
 
@@ -46,7 +48,7 @@ export async function getCalendarMonth(
     supabase
       .from("tasks")
       .select("id, title, due_date, completed, priority")
-      .eq("user_id", userId)
+      .eq("household_id", householdId)
       .gte("due_date", start)
       .lte("due_date", end)
       .order("priority", { ascending: false }),
