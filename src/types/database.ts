@@ -810,6 +810,9 @@ export type Database = {
           household_id: string
           href: string
           id: string
+          push_attempted_at: string | null
+          push_attempts: number
+          push_sent_at: string | null
           read_at: string | null
           recipient_user_id: string
           title: string
@@ -822,6 +825,9 @@ export type Database = {
           household_id: string
           href?: string
           id?: string
+          push_attempted_at?: string | null
+          push_attempts?: number
+          push_sent_at?: string | null
           read_at?: string | null
           recipient_user_id: string
           title: string
@@ -834,6 +840,9 @@ export type Database = {
           household_id?: string
           href?: string
           id?: string
+          push_attempted_at?: string | null
+          push_attempts?: number
+          push_sent_at?: string | null
           read_at?: string | null
           recipient_user_id?: string
           title?: string
@@ -1035,6 +1044,24 @@ export type Database = {
           display_name?: string
           id?: string
           role?: string
+        }
+        Relationships: []
+      }
+      push_public_config: {
+        Row: {
+          id: boolean
+          updated_at: string
+          vapid_public: string
+        }
+        Insert: {
+          id?: boolean
+          updated_at?: string
+          vapid_public: string
+        }
+        Update: {
+          id?: boolean
+          updated_at?: string
+          vapid_public?: string
         }
         Relationships: []
       }
@@ -1345,6 +1372,63 @@ export type Database = {
           },
         ]
       }
+      web_push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          household_id: string
+          id: string
+          last_error: string | null
+          last_success_at: string | null
+          p256dh: string
+          updated_at: string
+          user_agent: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          household_id: string
+          id?: string
+          last_error?: string | null
+          last_success_at?: string | null
+          p256dh: string
+          updated_at?: string
+          user_agent?: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          household_id?: string
+          id?: string
+          last_error?: string | null
+          last_success_at?: string | null
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_push_subscriptions_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "web_push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_logs: {
         Row: {
           created_at: string
@@ -1418,6 +1502,13 @@ export type Database = {
     }
     Functions: {
       delete_transaction: { Args: { p_id: string }; Returns: undefined }
+      get_harmony_push_secrets: {
+        Args: never
+        Returns: {
+          cron_token: string
+          vapid_private: string
+        }[]
+      }
       join_household_by_code: { Args: { p_code: string }; Returns: string }
       record_transaction: {
         Args: {
@@ -1433,6 +1524,10 @@ export type Database = {
         Returns: string
       }
       seed_initial_data: { Args: never; Returns: undefined }
+      store_harmony_push_secrets: {
+        Args: { p_cron: string; p_private: string; p_public: string }
+        Returns: undefined
+      }
       update_transaction: {
         Args: {
           p_account_id: string

@@ -1,4 +1,6 @@
-const STATIC_CACHE = "harmony-static-v1";
+importScripts("/push-handler.js");
+
+const STATIC_CACHE = "harmony-static-v2";
 
 const STATIC_ASSETS = [
   "/offline.html",
