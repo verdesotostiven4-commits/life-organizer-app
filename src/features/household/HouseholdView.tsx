@@ -35,6 +35,11 @@ import {
   updateHouseholdReminder,
   type HouseholdReminder,
 } from "./reminder-queries";
+import {
+  getPushPublicKey,
+  removePushSubscription,
+  savePushSubscription,
+} from "./push-queries";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
@@ -80,6 +85,19 @@ function defaultReminderDate() {
   const date = new Date();
   date.setHours(date.getHours() + 1, 0, 0, 0);
   return toLocalDateTimeInput(date);
+}
+
+function urlBase64ToArrayBuffer(value: string): ArrayBuffer {
+  const padding = "=".repeat((4 - (value.length % 4)) % 4);
+  const base64 = (value + padding).replaceAll("-", "+").replaceAll("_", "/");
+  const raw = window.atob(base64);
+  const bytes = new Uint8Array(raw.length);
+
+  for (let index = 0; index < raw.length; index += 1) {
+    bytes[index] = raw.charCodeAt(index);
+  }
+
+  return bytes.buffer;
 }
 
 export function HouseholdView({
@@ -184,22 +202,87 @@ export function HouseholdView({
   };
 
   const requestBrowserNotifications = async () => {
-    if (!("Notification" in window)) {
-      setPrefMessage("Este navegador no soporta notificaciones.");
+    if (
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      setPrefMessage("Este navegador no soporta notificaciones push.");
       return;
     }
 
-    const permission = await Notification.requestPermission();
-    const next = {
-      ...preferences,
-      browser_enabled: permission === "granted",
-    };
-    await persistPreferences(next);
+    setPrefMessage("Configurando notificaciones…");
 
-    if (permission === "granted") {
-      setPrefMessage("Notificaciones del dispositivo activadas.");
-    } else {
-      setPrefMessage("El navegador no dio permiso para mostrar avisos.");
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const existing = await registration.pushManager.getSubscription();
+
+      if (preferences.browser_enabled && existing) {
+        const hasOtherDevices = await removePushSubscription(existing.endpoint);
+        await existing.unsubscribe();
+        setPreferences((current) => ({
+          ...current,
+          browser_enabled: hasOtherDevices,
+        }));
+        setPrefMessage("Notificaciones desactivadas en este dispositivo.");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        setPrefMessage(
+          "Las notificaciones están bloqueadas en el navegador. Actívalas desde los permisos del sitio.",
+        );
+        return;
+      }
+
+      const permission =
+        Notification.permission === "granted"
+          ? "granted"
+          : await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        setPrefMessage("El navegador no dio permiso para mostrar avisos.");
+        return;
+      }
+
+      const vapidPublic = await getPushPublicKey();
+      if (!vapidPublic) {
+        setPrefMessage("El servicio push todavía se está preparando. Intenta de nuevo.");
+        return;
+      }
+
+      const subscription =
+        existing ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToArrayBuffer(vapidPublic),
+        }));
+
+      const serialized = subscription.toJSON();
+      const p256dh = serialized.keys?.p256dh;
+      const auth = serialized.keys?.auth;
+
+      if (!p256dh || !auth) {
+        throw new Error("El navegador no entregó las claves push");
+      }
+
+      await savePushSubscription({
+        endpoint: subscription.endpoint,
+        p256dh,
+        auth,
+        user_agent: navigator.userAgent,
+      });
+
+      setPreferences((current) => ({
+        ...current,
+        browser_enabled: true,
+      }));
+      setPrefMessage(
+        "Notificaciones push activadas. Harmony podrá avisarte aunque la PWA esté cerrada.",
+      );
+    } catch (error) {
+      console.error("Error configurando Web Push:", error);
+      setPrefMessage("No se pudieron activar las notificaciones push.");
     }
   };
 
@@ -518,16 +601,18 @@ export function HouseholdView({
             </div>
             <div className="rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
               <Bell className="mr-1 inline h-3.5 w-3.5 text-purple-500" />
-              Los avisos siempre quedan guardados dentro de Harmony. El permiso del
-              dispositivo permite mostrarlos también como notificación del navegador
-              cuando la PWA está activa.
+              Los avisos siempre quedan guardados dentro de Harmony. Si activas este
+              dispositivo, también llegarán como Web Push aunque la PWA esté cerrada,
+              respetando tus horas silenciosas.
             </div>
             <Button
               onClick={requestBrowserNotifications}
               variant={preferences.browser_enabled ? "secondary" : "primary"}
             >
               <BellRing className="h-4 w-4" />
-              {preferences.browser_enabled ? "Dispositivo activado" : "Activar en este dispositivo"}
+              {preferences.browser_enabled
+                ? "Desactivar en este dispositivo"
+                : "Activar en este dispositivo"}
             </Button>
           </div>
 
