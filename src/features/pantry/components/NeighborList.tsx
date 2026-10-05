@@ -5,9 +5,11 @@ import {
   CheckCircle2,
   Circle,
   PackageX,
+  Pencil,
   Plus,
   Radio,
   Trash2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -16,6 +18,7 @@ import {
   addNeighborItem,
   deleteNeighborItem,
   setNeighborItemStatus,
+  updateNeighborItem,
   type NeighborItem,
   type NeighborItemStatus,
   type NeighborListData,
@@ -56,6 +59,7 @@ export function NeighborList({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [items, setItems] = useState(initialList?.items ?? []);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
@@ -94,36 +98,52 @@ export function NeighborList({
     };
   }, [initialList, supabase]);
 
-  if (!initialList) {
-    return null;
-  }
+  if (!initialList) return null;
 
   const pending = items.filter((item) => item.status === "pendiente").length;
 
-  const handleAdd = async () => {
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setQuantity("");
+    setNote("");
+  };
+
+  const startEdit = (item: NeighborItem) => {
+    setEditingId(item.id);
+    setName(item.name);
+    setQuantity(item.quantity);
+    setNote(item.note);
+  };
+
+  const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
 
     try {
-      const created = await addNeighborItem({
-        list_id: initialList.id,
-        name,
-        quantity,
-        note,
-      });
-      setItems((current) => upsertItem(current, created));
-      setName("");
-      setQuantity("");
-      setNote("");
+      if (editingId) {
+        const updated = await updateNeighborItem(editingId, {
+          name,
+          quantity,
+          note,
+        });
+        setItems((current) => upsertItem(current, updated));
+      } else {
+        const created = await addNeighborItem({
+          list_id: initialList.id,
+          name,
+          quantity,
+          note,
+        });
+        setItems((current) => upsertItem(current, created));
+      }
+      resetForm();
     } finally {
       setSaving(false);
     }
   };
 
-  const handleStatus = async (
-    id: string,
-    status: NeighborItemStatus,
-  ) => {
+  const handleStatus = async (id: string, status: NeighborItemStatus) => {
     const previous = items;
     setItems((current) =>
       current.map((item) =>
@@ -148,6 +168,7 @@ export function NeighborList({
   const handleDelete = async (id: string) => {
     const previous = items;
     setItems((current) => current.filter((item) => item.id !== id));
+    if (editingId === id) resetForm();
 
     try {
       await deleteNeighborItem(id);
@@ -171,8 +192,8 @@ export function NeighborList({
               </span>
             </div>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Lista compartida para compras rápidas. Si uno marca un producto,
-              el otro lo ve sin refrescar.
+              Lista compartida para compras rápidas. Si uno agrega, corrige o
+              marca un producto, el otro lo ve sin refrescar.
             </p>
           </div>
 
@@ -181,11 +202,27 @@ export function NeighborList({
           </span>
         </div>
 
+        {editingId ? (
+          <div className="flex items-center justify-between rounded-2xl border border-indigo-100 bg-indigo-50/60 px-3 py-2">
+            <p className="text-xs font-bold text-indigo-700">
+              Editando producto existente
+            </p>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-indigo-400 hover:bg-white hover:text-indigo-700"
+              aria-label="Cancelar edición"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
+
         <div className="grid gap-2 lg:grid-cols-[1.2fr_120px_1fr_auto]">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => event.key === "Enter" && handleAdd()}
+            onKeyDown={(event) => event.key === "Enter" && handleSave()}
             placeholder="Producto · ej. pan, queso…"
             maxLength={120}
             className="h-11 rounded-xl border border-indigo-100 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
@@ -200,14 +237,18 @@ export function NeighborList({
           <input
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            onKeyDown={(event) => event.key === "Enter" && handleAdd()}
+            onKeyDown={(event) => event.key === "Enter" && handleSave()}
             placeholder="Nota opcional"
             maxLength={160}
             className="h-11 rounded-xl border border-indigo-100 px-3 text-sm text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
           />
-          <Button onClick={handleAdd} disabled={!name.trim() || saving}>
-            <Plus className="h-4 w-4" />
-            {saving ? "Agregando…" : "Agregar"}
+          <Button onClick={handleSave} disabled={!name.trim() || saving}>
+            {editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {saving
+              ? "Guardando…"
+              : editingId
+                ? "Guardar"
+                : "Agregar"}
           </Button>
         </div>
 
@@ -247,6 +288,15 @@ export function NeighborList({
                       {item.note ? <span>· {item.note}</span> : null}
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => startEdit(item)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-300 hover:bg-indigo-50 hover:text-indigo-600"
+                    aria-label={`Editar ${item.name}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
 
                   <button
                     type="button"

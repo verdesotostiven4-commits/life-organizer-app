@@ -67,6 +67,44 @@ export async function createHouseholdReminder(input: {
   return data as HouseholdReminder;
 }
 
+export async function updateHouseholdReminder(
+  id: string,
+  input: {
+    title: string;
+    note?: string;
+    remind_at: string;
+    href?: string;
+  },
+): Promise<HouseholdReminder> {
+  const supabase = await createClient();
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!householdId) throw new Error("No perteneces a un hogar");
+
+  const title = input.title.trim().slice(0, 120);
+  if (!title) throw new Error("Escribe un título");
+
+  const remindAt = new Date(input.remind_at);
+  if (Number.isNaN(remindAt.getTime())) throw new Error("Fecha inválida");
+
+  const { data, error } = await supabase
+    .from("reminders")
+    .update({
+      title,
+      note: input.note?.trim().slice(0, 300) ?? "",
+      remind_at: remindAt.toISOString(),
+      href: input.href ?? "/dashboard",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .select("id, title, note, remind_at, href, completed, created_at")
+    .single();
+
+  if (error) throw error;
+  revalidatePath("/household");
+  return data as HouseholdReminder;
+}
+
 export async function setHouseholdReminderCompleted(
   id: string,
   completed: boolean,

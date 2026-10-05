@@ -99,6 +99,41 @@ export async function addNeighborItem(input: {
   return data as NeighborItem;
 }
 
+export async function updateNeighborItem(
+  id: string,
+  input: {
+    name: string;
+    quantity?: string;
+    note?: string;
+  },
+): Promise<NeighborItem> {
+  const supabase = await createClient();
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!householdId) throw new Error("No perteneces a un hogar");
+
+  const name = input.name.trim().slice(0, 120);
+  if (!name) throw new Error("Producto inválido");
+
+  const { data, error } = await supabase
+    .from("household_purchase_items")
+    .update({
+      name,
+      quantity: input.quantity?.trim().slice(0, 40) ?? "",
+      note: input.note?.trim().slice(0, 160) ?? "",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .select(
+      "id, household_id, list_id, created_by, name, quantity, note, status, purchased_by, purchased_at, created_at, updated_at",
+    )
+    .single();
+
+  if (error) throw error;
+  revalidatePath("/pantry");
+  return data as NeighborItem;
+}
+
 export async function setNeighborItemStatus(
   id: string,
   status: NeighborItemStatus,

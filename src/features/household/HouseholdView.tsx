@@ -10,8 +10,10 @@ import {
   ClipboardCopy,
   Clock3,
   Home,
+  Pencil,
   Plus,
   Trash2,
+  X,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -30,6 +32,7 @@ import {
   createHouseholdReminder,
   deleteHouseholdReminder,
   setHouseholdReminderCompleted,
+  updateHouseholdReminder,
   type HouseholdReminder,
 } from "./reminder-queries";
 import { cn } from "@/lib/utils";
@@ -67,11 +70,16 @@ const dateTimeFormatter = new Intl.DateTimeFormat("es-EC", {
   minute: "2-digit",
 });
 
+function toLocalDateTimeInput(value: Date | string) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 function defaultReminderDate() {
   const date = new Date();
   date.setHours(date.getHours() + 1, 0, 0, 0);
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
+  return toLocalDateTimeInput(date);
 }
 
 export function HouseholdView({
@@ -107,6 +115,7 @@ export function HouseholdView({
   const [reminderNote, setReminderNote] = useState("");
   const [reminderAt, setReminderAt] = useState(defaultReminderDate);
   const [reminderHref, setReminderHref] = useState("/dashboard");
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   const [reminderLoading, setReminderLoading] = useState(false);
 
   const handleJoin = async () => {
@@ -194,29 +203,52 @@ export function HouseholdView({
     }
   };
 
+  const resetReminderForm = () => {
+    setEditingReminderId(null);
+    setReminderTitle("");
+    setReminderNote("");
+    setReminderAt(defaultReminderDate());
+    setReminderHref("/dashboard");
+  };
+
+  const editReminder = (reminder: HouseholdReminder) => {
+    setEditingReminderId(reminder.id);
+    setReminderTitle(reminder.title);
+    setReminderNote(reminder.note);
+    setReminderAt(toLocalDateTimeInput(reminder.remind_at));
+    setReminderHref(reminder.href || "/dashboard");
+  };
+
   const addReminder = async () => {
     if (!reminderTitle.trim() || !reminderAt) return;
     setReminderLoading(true);
 
     try {
-      const remindAtIso = new Date(reminderAt).toISOString();
-      const created = await createHouseholdReminder({
+      const input = {
         title: reminderTitle,
         note: reminderNote,
-        remind_at: remindAtIso,
+        remind_at: new Date(reminderAt).toISOString(),
         href: reminderHref,
-      });
-      setReminders((current) =>
-        [...current, created].sort(
+      };
+
+      const saved = editingReminderId
+        ? await updateHouseholdReminder(editingReminderId, input)
+        : await createHouseholdReminder(input);
+
+      setReminders((current) => {
+        const next = editingReminderId
+          ? current.map((reminder) =>
+              reminder.id === editingReminderId ? saved : reminder,
+            )
+          : [...current, saved];
+
+        return next.sort(
           (a, b) =>
             Number(a.completed) - Number(b.completed) ||
             new Date(a.remind_at).getTime() - new Date(b.remind_at).getTime(),
-        ),
-      );
-      setReminderTitle("");
-      setReminderNote("");
-      setReminderAt(defaultReminderDate());
-      setReminderHref("/dashboard");
+        );
+      });
+      resetReminderForm();
     } finally {
       setReminderLoading(false);
     }
@@ -521,6 +553,22 @@ export function HouseholdView({
             </div>
           </div>
 
+          {editingReminderId ? (
+            <div className="flex items-center justify-between rounded-2xl border border-amber-100 bg-amber-50/60 px-3 py-2">
+              <p className="text-xs font-bold text-amber-700">
+                Editando recordatorio
+              </p>
+              <button
+                type="button"
+                onClick={resetReminderForm}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-amber-400 hover:bg-white hover:text-amber-700"
+                aria-label="Cancelar edición del recordatorio"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
+
           <div className="grid gap-2 lg:grid-cols-[1.2fr_1.2fr_190px_170px_auto]">
             <input
               value={reminderTitle}
@@ -549,8 +597,16 @@ export function HouseholdView({
               onClick={addReminder}
               disabled={!reminderTitle.trim() || !reminderAt || reminderLoading}
             >
-              <Plus className="h-4 w-4" />
-              {reminderLoading ? "Guardando…" : "Agregar"}
+              {editingReminderId ? (
+                <Pencil className="h-4 w-4" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              {reminderLoading
+                ? "Guardando…"
+                : editingReminderId
+                  ? "Guardar"
+                  : "Agregar"}
             </Button>
           </div>
 
@@ -599,6 +655,14 @@ export function HouseholdView({
                       {reminder.note ? ` · ${reminder.note}` : ""}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => editReminder(reminder)}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-300 hover:bg-amber-50 hover:text-amber-600"
+                    aria-label="Editar recordatorio"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => removeReminder(reminder.id)}
