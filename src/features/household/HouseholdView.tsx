@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Bell,
@@ -129,12 +129,35 @@ export function HouseholdView({
   );
   const [savingName, setSavingName] = useState(false);
   const [prefMessage, setPrefMessage] = useState("");
+  const [devicePushEnabled, setDevicePushEnabled] = useState(false);
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderNote, setReminderNote] = useState("");
   const [reminderAt, setReminderAt] = useState(defaultReminderDate);
   const [reminderHref, setReminderHref] = useState("/dashboard");
   const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
   const [reminderLoading, setReminderLoading] = useState(false);
+
+  useEffect(() => {
+    if (
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      return;
+    }
+
+    let active = true;
+
+    navigator.serviceWorker.ready
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((subscription) => {
+        if (active) setDevicePushEnabled(Boolean(subscription));
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleJoin = async () => {
     if (!joinCode.trim()) return;
@@ -217,9 +240,10 @@ export function HouseholdView({
       const registration = await navigator.serviceWorker.ready;
       const existing = await registration.pushManager.getSubscription();
 
-      if (preferences.browser_enabled && existing) {
+      if (devicePushEnabled && existing) {
         const hasOtherDevices = await removePushSubscription(existing.endpoint);
         await existing.unsubscribe();
+        setDevicePushEnabled(false);
         setPreferences((current) => ({
           ...current,
           browser_enabled: hasOtherDevices,
@@ -273,6 +297,7 @@ export function HouseholdView({
         user_agent: navigator.userAgent,
       });
 
+      setDevicePushEnabled(true);
       setPreferences((current) => ({
         ...current,
         browser_enabled: true,
@@ -607,10 +632,10 @@ export function HouseholdView({
             </div>
             <Button
               onClick={requestBrowserNotifications}
-              variant={preferences.browser_enabled ? "secondary" : "primary"}
+              variant={devicePushEnabled ? "secondary" : "primary"}
             >
               <BellRing className="h-4 w-4" />
-              {preferences.browser_enabled
+              {devicePushEnabled
                 ? "Desactivar en este dispositivo"
                 : "Activar en este dispositivo"}
             </Button>
