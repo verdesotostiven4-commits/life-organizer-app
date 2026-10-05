@@ -252,6 +252,39 @@ export async function createDebt(input: {
   return data.id;
 }
 
+/** Edita los datos de una deuda sin cambiar su estado. */
+export async function updateDebt(
+  id: string,
+  input: {
+    person: string;
+    amount: number;
+    reason?: string;
+    direction: DebtDirection;
+  },
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await getCurrentUserId(supabase);
+  const householdId = await getCurrentHouseholdId(supabase);
+  if (!userId || !householdId) throw new Error("No autenticado o sin hogar");
+  if (!input.person.trim() || input.amount <= 0) throw new Error("Datos inválidos");
+
+  const { error } = await supabase
+    .from("debts")
+    .update({
+      person: input.person.trim().slice(0, 120),
+      amount: input.amount,
+      reason: input.reason?.trim().slice(0, 240) ?? "",
+      direction: input.direction,
+    } as never)
+    .eq("id", id)
+    .eq("household_id", householdId);
+
+  if (error) throw error;
+  revalidatePath("/finance");
+  revalidatePath("/dashboard");
+  revalidatePath("/stats");
+}
+
 /** Marca una deuda como pagada / pendiente. */
 export async function toggleDebtStatus(
   id: string,
