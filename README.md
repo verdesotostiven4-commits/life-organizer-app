@@ -40,7 +40,7 @@ GitHub Actions ejecuta ambas comprobaciones para pull requests dirigidos a `main
 
 El proyecto de Supabase es la fuente de verdad de la base de datos de producción. El repositorio conserva el esquema base y migraciones de mantenimiento bajo `supabase/`.
 
-Las tablas antiguas del prototipo se mantienen como archivo histórico y tienen RLS habilitado sin políticas, por lo que quedan cerradas para el acceso normal de la aplicación.
+Las tablas antiguas del prototipo se mantienen como archivo histórico y tienen RLS con políticas de denegación explícita para los roles públicos de la aplicación.
 
 ## Despliegue
 
