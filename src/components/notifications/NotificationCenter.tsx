@@ -71,24 +71,8 @@ export function NotificationCenter() {
               ...current.filter((item) => item.id !== row.id),
             ].slice(0, 30));
 
-            if (
-              "Notification" in window &&
-              Notification.permission === "granted" &&
-              "serviceWorker" in navigator
-            ) {
-              try {
-                const registration = await navigator.serviceWorker.ready;
-                await registration.showNotification(row.title, {
-                  body: row.body,
-                  icon: "/pwa/icon/192",
-                  badge: "/pwa/icon/192",
-                  tag: row.id,
-                  data: { href: row.href },
-                });
-              } catch {
-                // El aviso seguirá disponible dentro de Harmony.
-              }
-            }
+            // El centro se actualiza en tiempo real. Los avisos nativos se
+            // entregan por Web Push para evitar mostrar el mismo evento dos veces.
           },
         )
         .subscribe();
